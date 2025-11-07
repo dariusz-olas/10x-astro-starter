@@ -94,7 +94,7 @@ import '../styles/global.css';
       </div>
     </div>
 
-    <script>
+    <script type="module">
       import { supabase } from '../lib/supabase';
 
       document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
@@ -138,6 +138,7 @@ import '../styles/global.css';
         }
 
         try {
+          console.log('🔐 Attempting registration...');
           const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -145,9 +146,14 @@ import '../styles/global.css';
 
           if (error) throw error;
 
+          console.log('🔐 Registration successful, redirecting to dashboard');
+          // Poczekaj chwilę, aby upewnić się, że sesja jest zapisana w localStorage
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
           // Redirect to dashboard
           window.location.href = '/dashboard';
         } catch (error: any) {
+          console.error('❌ Registration error:', error);
           // Show error
           if (errorMessage) {
             errorMessage.textContent = error.message || 'Błąd rejestracji';
