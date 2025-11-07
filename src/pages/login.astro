@@ -1,0 +1,141 @@
+---
+import '../styles/global.css';
+---
+
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logowanie - 10xCards</title>
+  </head>
+  <body>
+    <div class="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-purple-600 to-blue-600">
+      <div class="max-w-md w-full">
+        <!-- Logo i nagłówek -->
+        <div class="text-center mb-8">
+          <h1 class="text-4xl font-bold text-white mb-2">10xCards</h1>
+          <p class="text-white/80">Zaloguj się do swojego konta</p>
+        </div>
+
+        <!-- Formularz -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+          <form id="loginForm" class="space-y-6">
+            <!-- Email -->
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="twoj@email.pl"
+              />
+            </div>
+
+            <!-- Hasło -->
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                Hasło
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <!-- Error message -->
+            <div id="errorMessage" class="hidden text-sm text-red-600 bg-red-50 p-3 rounded-lg"></div>
+
+            <!-- Submit button -->
+            <button
+              type="submit"
+              id="submitButton"
+              class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
+            >
+              Zaloguj się
+            </button>
+          </form>
+
+          <!-- Link do rejestracji -->
+          <div class="mt-6 text-center">
+            <p class="text-sm text-gray-600">
+              Nie masz konta?{' '}
+              <a href="/register" class="text-purple-600 font-medium hover:text-purple-700">
+                Zarejestruj się
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { supabase } from '../lib/supabase';
+
+      // Pobierz parametr redirect z URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const rawRedirect = urlParams.get('redirect');
+      
+      // Walidacja redirect - tylko wewnętrzne ścieżki
+      let redirectTo = '/dashboard';
+      if (rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.includes('//')) {
+        redirectTo = rawRedirect;
+      }
+
+      document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const form = e.target as HTMLFormElement;
+        const email = (form.querySelector('#email') as HTMLInputElement)?.value;
+        const password = (form.querySelector('#password') as HTMLInputElement)?.value;
+        const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
+        const submitButton = document.getElementById('submitButton') as HTMLButtonElement;
+
+        // Reset error
+        if (errorMessage) {
+          errorMessage.classList.add('hidden');
+          errorMessage.textContent = '';
+        }
+
+        // Disable button
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Logowanie...';
+        }
+
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) throw error;
+
+          // Redirect to original page or dashboard
+          window.location.href = redirectTo;
+        } catch (error: any) {
+          // Show error
+          if (errorMessage) {
+            errorMessage.textContent = error.message || 'Niepoprawne dane logowania';
+            errorMessage.classList.remove('hidden');
+          }
+
+          // Re-enable button
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Zaloguj się';
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+
