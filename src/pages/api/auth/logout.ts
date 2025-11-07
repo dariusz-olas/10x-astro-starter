@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { createServerSupabaseClient } from '../../db/supabase-server';
+import { createServerSupabaseClient } from '../../../db/supabase-server';
 
 export const prerender = false;
 
