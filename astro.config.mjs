@@ -11,10 +11,7 @@ export default defineConfig({
     react(),
     sitemap()
   ],
-  adapter: cloudflare({
-    mode: "advanced",
-    functionPerRoute: false,
-  }),
+  adapter: cloudflare(),
   output: "server", // SSR dla endpointów API
   vite: {
     envPrefix: "PUBLIC_",
