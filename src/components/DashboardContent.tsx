@@ -28,10 +28,22 @@ export default function DashboardContent() {
       setLoading(true);
       setError(null);
 
+      // Pobierz token z sesji Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        const redirectTo = encodeURIComponent('/dashboard');
+        window.location.href = `/login?redirect=${redirectTo}`;
+        return;
+      }
+
       // AuthWrapper już sprawdził autentykację, więc możemy bezpiecznie pobrać statystyki
       const res = await fetch('/api/dashboard/stats', {
         method: 'GET',
         credentials: 'include', // Ważne: wysyłaj cookies
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
       });
 
       if (!res.ok) {

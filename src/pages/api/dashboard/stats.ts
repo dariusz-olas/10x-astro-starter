@@ -30,9 +30,42 @@ function getMostUsedTags(allTags: string[][]): string[] {
 export const GET: APIRoute = async ({ request, cookies }) => {
   try {
     const supabase = createServerSupabaseClient(cookies);
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    
+    // Sprawdź nagłówek Authorization
+    const authHeader = request.headers.get('Authorization');
+    let session = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Jeśli token jest w nagłówku Authorization, użyj go do weryfikacji
+      const token = authHeader.substring(7);
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      
+      if (!userError && user) {
+        // Utwórz sesję z tokenu - pobierz pełną sesję
+        const { data: { session: tokenSession } } = await supabase.auth.getSession();
+        if (tokenSession && tokenSession.user.id === user.id) {
+          session = tokenSession;
+        } else {
+          // Jeśli nie ma sesji w cookies, utwórz obiekt sesji z user
+          session = {
+            user: user,
+            access_token: token,
+            refresh_token: '',
+            expires_in: 3600,
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+            token_type: 'bearer',
+          } as any;
+        }
+      }
+    }
+    
+    // Jeśli nie ma sesji z tokenu, spróbuj odczytać z cookies
+    if (!session) {
+      const {
+        data: { session: cookieSession },
+      } = await supabase.auth.getSession();
+      session = cookieSession;
+    }
     
     if (!session) {
       return new Response(
