@@ -17,6 +17,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('🔐 Auth state changed:', _event, session?.user?.email || 'no session');
       if (session) {
         setUser(session.user);
       } else {
@@ -32,21 +33,36 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 
   const checkAuth = async () => {
     try {
+      // Poczekaj chwilę, aby upewnić się, że localStorage jest gotowy
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const {
         data: { session },
+        error,
       } = await supabase.auth.getSession();
+
+      console.log('🔐 Session check:', { 
+        hasSession: !!session, 
+        userEmail: session?.user?.email,
+        error: error?.message 
+      });
+
+      if (error) {
+        console.error('❌ Session error:', error);
+      }
 
       if (!session) {
         const redirectTo = encodeURIComponent(
           window.location.pathname + window.location.search
         );
+        console.log('🔐 No session, redirecting to login');
         window.location.href = `/login?redirect=${redirectTo}`;
         return;
       }
 
       setUser(session.user);
     } catch (error) {
-      console.error('Auth error:', error);
+      console.error('❌ Auth error:', error);
       const redirectTo = encodeURIComponent(window.location.pathname);
       window.location.href = `/login?redirect=${redirectTo}`;
     } finally {
