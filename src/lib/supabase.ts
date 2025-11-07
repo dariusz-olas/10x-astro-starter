@@ -13,17 +13,28 @@ function getSupabaseClient(): SupabaseClient {
     return supabaseInstance;
   }
 
-  const supabaseUrl = String(import.meta.env.PUBLIC_SUPABASE_URL || '').trim();
-  const supabaseAnonKey = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '').trim();
+  // W Cloudflare Pages, zmienne środowiskowe są dostępne w runtime
+  // Sprawdź czy są dostępne w import.meta.env
+  const supabaseUrl = typeof import.meta !== 'undefined' && import.meta.env
+    ? String(import.meta.env.PUBLIC_SUPABASE_URL || '').trim()
+    : '';
+  const supabaseAnonKey = typeof import.meta !== 'undefined' && import.meta.env
+    ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '').trim()
+    : '';
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Supabase credentials are required.\n' +
-        'Dodaj do pliku .env:\n' +
-        '  PUBLIC_SUPABASE_URL=twoj-url\n' +
-        '  PUBLIC_SUPABASE_ANON_KEY=twoj-klucz\n' +
-        'Pobierz wartości z: Supabase Dashboard -> Settings -> API'
-    );
+    const errorMsg = 
+      'Supabase credentials are required.\n\n' +
+      'W Cloudflare Pages Dashboard:\n' +
+      '1. Przejdź do Settings → Environment Variables\n' +
+      '2. Dodaj dla Production:\n' +
+      '   - PUBLIC_SUPABASE_URL=https://twoj-projekt.supabase.co\n' +
+      '   - PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key\n\n' +
+      'Pobierz wartości z: Supabase Dashboard → Settings → API\n\n' +
+      'Po dodaniu zmiennych, zredeployuj aplikację.';
+    
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
   }
 
   supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
