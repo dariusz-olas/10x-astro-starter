@@ -74,6 +74,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       );
     }
     
+    const userId = session.user.id;
     
     // 1. Pobierz liczbę fiszek
     const { count: totalCards, error: countError } = await supabase
