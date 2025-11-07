@@ -93,11 +93,11 @@ import '../styles/global.css';
       document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const form = e.target as HTMLFormElement;
-        const email = (form.querySelector('#email') as HTMLInputElement)?.value;
-        const password = (form.querySelector('#password') as HTMLInputElement)?.value;
-        const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
-        const submitButton = document.getElementById('submitButton') as HTMLButtonElement;
+        const form = e.target;
+        const email = form.querySelector('#email')?.value;
+        const password = form.querySelector('#password')?.value;
+        const errorMessage = document.getElementById('errorMessage');
+        const submitButton = document.getElementById('submitButton');
 
         // Reset error
         if (errorMessage) {
@@ -126,11 +126,12 @@ import '../styles/global.css';
           
           // Redirect to original page or dashboard
           window.location.href = redirectTo;
-        } catch (error: any) {
+        } catch (error) {
           console.error('❌ Login error:', error);
+          const errorMsg = error?.message || 'Niepoprawne dane logowania';
           // Show error
           if (errorMessage) {
-            errorMessage.textContent = error.message || 'Niepoprawne dane logowania';
+            errorMessage.textContent = errorMsg;
             errorMessage.classList.remove('hidden');
           }
 

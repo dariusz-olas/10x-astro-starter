@@ -100,12 +100,12 @@ import '../styles/global.css';
       document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const form = e.target as HTMLFormElement;
-        const email = (form.querySelector('#email') as HTMLInputElement)?.value;
-        const password = (form.querySelector('#password') as HTMLInputElement)?.value;
-        const confirmPassword = (form.querySelector('#confirmPassword') as HTMLInputElement)?.value;
-        const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
-        const submitButton = document.getElementById('submitButton') as HTMLButtonElement;
+        const form = e.target;
+        const email = form.querySelector('#email')?.value;
+        const password = form.querySelector('#password')?.value;
+        const confirmPassword = form.querySelector('#confirmPassword')?.value;
+        const errorMessage = document.getElementById('errorMessage');
+        const submitButton = document.getElementById('submitButton');
 
         // Reset error
         if (errorMessage) {
@@ -152,11 +152,12 @@ import '../styles/global.css';
           
           // Redirect to dashboard
           window.location.href = '/dashboard';
-        } catch (error: any) {
+        } catch (error) {
           console.error('❌ Registration error:', error);
+          const errorMsg = error?.message || 'Błąd rejestracji';
           // Show error
           if (errorMessage) {
-            errorMessage.textContent = error.message || 'Błąd rejestracji';
+            errorMessage.textContent = errorMsg;
             errorMessage.classList.remove('hidden');
           }
 
