@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import AuthWrapper from '../components/AuthWrapper';
 import DashboardContent from '../components/DashboardContent';
 
 export const prerender = false;
@@ -24,7 +25,9 @@ export const prerender = false;
         </header>
 
         <!-- Dashboard Content -->
-        <DashboardContent client:only="react" />
+        <AuthWrapper client:load>
+          <DashboardContent client:only="react" />
+        </AuthWrapper>
       </div>
     </div>
   </body>

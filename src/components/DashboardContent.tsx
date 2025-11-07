@@ -11,7 +11,6 @@ interface DashboardStats {
 
 export default function DashboardContent() {
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalCards: 0,
     lastReview: null,
@@ -29,22 +28,15 @@ export default function DashboardContent() {
       setLoading(true);
       setError(null);
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        const redirectTo = encodeURIComponent('/dashboard');
-        window.location.href = `/login?redirect=${redirectTo}`;
-        return;
-      }
-
-      setUser(session.user);
-
+      // AuthWrapper już sprawdził autentykację, więc możemy bezpiecznie pobrać statystyki
       const res = await fetch('/api/dashboard/stats', {
         method: 'GET',
+        credentials: 'include', // Ważne: wysyłaj cookies
       });
 
       if (!res.ok) {
         if (res.status === 401) {
+          // Jeśli 401, przekieruj do logowania
           const redirectTo = encodeURIComponent('/dashboard');
           window.location.href = `/login?redirect=${redirectTo}`;
           return;
@@ -90,8 +82,6 @@ export default function DashboardContent() {
       </div>
     );
   }
-
-  if (!user) return null;
 
   return (
     <>
