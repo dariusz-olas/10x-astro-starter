@@ -41,12 +41,16 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       const { data: { user }, error: userError } = await supabase.auth.getUser(token);
       
       if (!userError && user) {
-        // Utwórz sesję z tokenu - pobierz pełną sesję
-        const { data: { session: tokenSession } } = await supabase.auth.getSession();
-        if (tokenSession && tokenSession.user.id === user.id) {
+        // Ustaw sesję w Supabase client, aby mógł wykonywać zapytania
+        const { data: { session: tokenSession }, error: sessionError } = await supabase.auth.setSession({
+          access_token: token,
+          refresh_token: '',
+        });
+        
+        if (!sessionError && tokenSession) {
           session = tokenSession;
         } else {
-          // Jeśli nie ma sesji w cookies, utwórz obiekt sesji z user
+          // Jeśli setSession nie działa, utwórz obiekt sesji z user
           session = {
             user: user,
             access_token: token,
