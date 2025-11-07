@@ -1,105 +1,130 @@
-# 10x Astro Starter
+# 10xCards
 
-A modern, opinionated starter template for building fast, accessible, and AI-friendly web applications.
+Aplikacja do generowania i nauki fiszek edukacyjnych wspomagana przez AI. Zbudowana z Astro, React, Supabase i Tailwind CSS.
 
-## Tech Stack
+## 🚀 Funkcjonalności
 
-- [Astro](https://astro.build/) v5.5.5 - Modern web framework for building fast, content-focused websites
-- [React](https://react.dev/) v19.0.0 - UI library for building interactive components
+- 🔐 **Autentykacja** - Rejestracja, logowanie i wylogowanie użytkowników
+- 📝 **CRUD Fiszek** - Tworzenie, edycja, usuwanie i wyświetlanie fiszek z tagami
+- 🤖 **Generator AI** - Automatyczne generowanie fiszek z tekstu przy użyciu modeli AI (OpenRouter)
+- 🔁 **System Powtórek** - Spaced repetition z algorytmem SM-2 lite do optymalizacji nauki
+- 📊 **Dashboard** - Statystyki użytkownika, ostatnie powtórki, najczęstsze tagi
+
+## 🛠️ Tech Stack
+
+- [Astro](https://astro.build/) v5 - Framework webowy z SSR
+- [React](https://react.dev/) v19 - Biblioteka UI dla komponentów interaktywnych
 - [TypeScript](https://www.typescriptlang.org/) v5 - Type-safe JavaScript
-- [Tailwind CSS](https://tailwindcss.com/) v4.0.17 - Utility-first CSS framework
+- [Tailwind CSS](https://tailwindcss.com/) v4 - Utility-first CSS framework
+- [Supabase](https://supabase.com/) - Backend-as-a-Service (PostgreSQL, Auth, RLS)
+- [OpenRouter](https://openrouter.ai/) - API do modeli AI
+- [Cloudflare Pages](https://pages.cloudflare.com/) - Hosting i deployment
+- [Vitest](https://vitest.dev/) - Framework testowy
 
-## Prerequisites
+## 📋 Wymagania
 
-- Node.js v22.14.0 (as specified in `.nvmrc`)
-- npm (comes with Node.js)
+- Node.js v22+ (sprawdź `.nvmrc`)
+- npm (dołączony do Node.js)
+- Konto Supabase (darmowe)
+- Konto OpenRouter z kluczem API
 
-## Getting Started
+## 🏃 Uruchomienie lokalne
 
-1. Clone the repository:
+1. **Sklonuj repozytorium:**
 
 ```bash
-git clone https://github.com/przeprogramowani/10x-astro-starter.git
-cd 10x-astro-starter
+git clone https://github.com/your-username/10xcards.git
+cd 10xcards
 ```
 
-2. Install dependencies:
+2. **Zainstaluj zależności:**
 
 ```bash
 npm install
 ```
 
-3. Run the development server:
+3. **Skonfiguruj zmienne środowiskowe:**
+
+Utwórz plik `.env` w głównym katalogu projektu:
+
+```env
+PUBLIC_SUPABASE_URL=https://twoj-projekt.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key
+OPENROUTER_API_KEY=sk-or-v1-twoj-klucz
+```
+
+**Gdzie znaleźć wartości:**
+- Supabase: Dashboard → Settings → API
+- OpenRouter: [openrouter.ai/keys](https://openrouter.ai/keys)
+
+4. **Uruchom serwer deweloperski:**
 
 ```bash
 npm run dev
 ```
 
-4. Build for production:
+Aplikacja będzie dostępna pod adresem `http://localhost:4321`
 
-```bash
-npm run build
+5. **Uruchom migracje Supabase:**
+
+Zobacz instrukcje w `supabase/migrations/README.md` i `SUPABASE_SETUP.md`
+
+## 📜 Dostępne skrypty
+
+- `npm run dev` - Uruchom serwer deweloperski
+- `npm run build` - Zbuduj aplikację dla produkcji
+- `npm run preview` - Podgląd zbudowanej aplikacji
+- `npm run lint` - Uruchom ESLint
+- `npm run lint:fix` - Napraw błędy ESLint
+- `npm test` - Uruchom testy jednostkowe
+- `npm run test:watch` - Uruchom testy w trybie watch
+
+## 📁 Struktura projektu
+
 ```
-
-## Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Fix ESLint issues
-
-## Important Notes
-
-### Windows ARM64 Compatibility
-
-If you're running on Windows ARM64, local builds (`npm run build`) may fail due to Cloudflare adapter's `workerd` dependency not supporting this platform. This is a known limitation and does not affect production builds on Cloudflare Pages (which runs on Linux). The configuration is correct and will work in production.
-
-For local development on Windows ARM64, you can:
-- Use WSL2 (Windows Subsystem for Linux)
-- Test builds directly on Cloudflare Pages via GitHub integration
-- Continue development with `npm run dev` (which should work)
-
-## Project Structure
-
-```md
 .
 ├── src/
-│   ├── layouts/    # Astro layouts
-│   ├── pages/      # Astro pages
-│   │   └── api/    # API endpoints
-│   ├── components/ # UI components (Astro & React)
-│   └── assets/     # Static assets
-├── public/         # Public assets
+│   ├── layouts/          # Astro layouts
+│   ├── pages/            # Astro pages
+│   │   └── api/          # API endpoints
+│   ├── components/       # Komponenty UI (Astro & React)
+│   ├── lib/              # Biblioteki i utilities
+│   ├── db/               # Klienci Supabase
+│   ├── hooks/            # React hooks
+│   └── types.ts          # Wspólne typy TypeScript
+├── supabase/
+│   └── migrations/       # Migracje SQL dla Supabase
+├── public/               # Statyczne zasoby
+└── .github/
+    └── workflows/        # GitHub Actions workflows
 ```
 
-## AI Development Support
+## 🌐 Aplikacja produkcyjna
 
-This project is configured with AI development tools to enhance the development experience, providing guidelines for:
+Aplikacja jest wdrożona na Cloudflare Pages: **[Dodaj link do aplikacji]**
 
-- Project structure
-- Coding practices
-- Frontend development
-- Styling with Tailwind
-- Accessibility best practices
-- Astro and React guidelines
+Szczegółowe instrukcje deploymentu znajdują się w [DEPLOYMENT.md](./DEPLOYMENT.md)
 
-### Cursor IDE
+## 🧪 Testy
 
-The project includes AI rules in `.cursor/rules/` directory that help Cursor IDE understand the project structure and provide better code suggestions.
+Projekt zawiera testy jednostkowe dla modułu `scheduling.ts` (algorytm SM-2 lite):
 
-### GitHub Copilot
+```bash
+npm test
+```
 
-AI instructions for GitHub Copilot are available in `.github/copilot-instructions.md`
+Testy są uruchamiane automatycznie w CI/CD przy każdym pushu do branchy `main` lub `master`.
 
-### Windsurf
+## 🔒 Bezpieczeństwo
 
-The `.windsurfrules` file contains AI configuration for Windsurf.
+- ✅ Wszystkie klucze API są przechowywane w zmiennych środowiskowych
+- ✅ `.env` jest w `.gitignore` (nigdy nie commituj kluczy!)
+- ✅ Row Level Security (RLS) jest włączone w Supabase dla wszystkich tabel
+- ✅ Prywatne klucze API (`OPENROUTER_API_KEY`) są używane tylko server-side
+- ✅ Publiczne klucze (`PUBLIC_*`) są bezpieczne do użycia w client-side
 
-## Contributing
+## 📚 Dokumentacja
 
-Please follow the AI guidelines and coding practices defined in the AI configuration files when contributing to this project.
-
-## License
-
-MIT
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Instrukcje deploymentu na Cloudflare Pages
+- [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) - Konfiguracja Supabase
+- [supabase/migrations/README.md](./supabase/migrations/README.md) - Instrukcje migracji
