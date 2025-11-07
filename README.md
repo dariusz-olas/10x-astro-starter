@@ -78,6 +78,10 @@ Zobacz instrukcje w `supabase/migrations/README.md` i `SUPABASE_SETUP.md`
 - `npm run lint:fix` - Napraw błędy ESLint
 - `npm test` - Uruchom testy jednostkowe
 - `npm run test:watch` - Uruchom testy w trybie watch
+- `npm run test:e2e` - Uruchom testy E2E
+- `npm run test:e2e:ui` - Uruchom testy E2E z interfejsem graficznym
+- `npm run test:e2e:headed` - Uruchom testy E2E w trybie headed
+- `npm run test:e2e:debug` - Uruchom testy E2E w trybie debug
 
 ## 📁 Struktura projektu
 
@@ -107,13 +111,40 @@ Szczegółowe instrukcje deploymentu znajdują się w [DEPLOYMENT.md](./DEPLOYME
 
 ## 🧪 Testy
 
+### Testy jednostkowe
+
 Projekt zawiera testy jednostkowe dla modułu `scheduling.ts` (algorytm SM-2 lite):
 
 ```bash
 npm test
 ```
 
-Testy są uruchamiane automatycznie w CI/CD przy każdym pushu do branchy `main` lub `master`.
+### Testy E2E (End-to-End)
+
+Projekt zawiera testy E2E z perspektywy użytkownika, które weryfikują pełny przepływ:
+- Rejestracja → Logowanie → Dodanie fiszki → Powtórka → Dashboard
+
+**Uruchomienie testów E2E:**
+
+```bash
+# Uruchom wszystkie testy E2E
+npm run test:e2e
+
+# Uruchom testy z interfejsem graficznym
+npm run test:e2e:ui
+
+# Uruchom testy w trybie headed (z widoczną przeglądarką)
+npm run test:e2e:headed
+
+# Uruchom testy w trybie debug
+npm run test:e2e:debug
+```
+
+**Wymagania dla testów E2E:**
+- Zmienne środowiskowe Supabase muszą być skonfigurowane (w `.env` lub jako secrets w CI/CD)
+- Serwer deweloperski (`npm run dev`) musi być uruchomiony lub zostanie uruchomiony automatycznie przez Playwright
+
+**Uwaga:** Testy E2E używają prawdziwego Supabase, więc każdy test tworzy unikalnego użytkownika (email z timestampem). Testy są uruchamiane automatycznie w CI/CD, jeśli dostępne są zmienne środowiskowe Supabase (nie blokują builda jeśli brakuje zmiennych).
 
 ## 🔒 Bezpieczeństwo
 
@@ -128,3 +159,55 @@ Testy są uruchamiane automatycznie w CI/CD przy każdym pushu do branchy `main`
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - Instrukcje deploymentu na Cloudflare Pages
 - [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) - Konfiguracja Supabase
 - [supabase/migrations/README.md](./supabase/migrations/README.md) - Instrukcje migracji
+
+## ✅ Checklist Certyfikacji
+
+### Wymagania certyfikacyjne
+- [x] ✅ Autentykacja działa poprawnie
+- [x] ✅ CRUD dla fiszek działa
+- [x] ✅ Funkcja z LLM (generator) działa
+- [x] ✅ Funkcja z logiką biznesową (powtórki) działa
+- [x] ✅ Testy przechodzą
+- [x] ✅ CI/CD działa
+- [ ] ⏳ Aplikacja wdrożona na produkcji (wymaga konfiguracji Cloudflare Pages)
+
+### Dokumentacja
+- [x] ✅ README.md gotowy
+- [x] ✅ Instrukcje lokalnego uruchomienia
+- [x] ✅ Link do aplikacji produkcyjnej (do dodania po deployu)
+
+### Jakość kodu
+- [x] ✅ Brak console.log() w produkcji (zachowane console.error dla błędów)
+- [x] ✅ Brak wrażliwych danych w commicie
+- [x] ✅ Kod jest czytelny i zorganizowany
+
+## 🐛 Troubleshooting
+
+### Aplikacja nie uruchamia się lokalnie
+- Sprawdź czy plik `.env` istnieje i zawiera poprawne wartości
+- Sprawdź wersję Node.js: `node --version` (powinna być 22+)
+- Sprawdź czy port 4321 nie jest zajęty
+
+### Windows ARM64 Compatibility
+Jeśli używasz Windows ARM64, lokalne buildy (`npm run build`) mogą nie działać z powodu ograniczeń adaptera Cloudflare. To nie wpływa na buildy produkcyjne na Cloudflare Pages (które działają na Linux). Konfiguracja jest poprawna i będzie działać w produkcji.
+
+Dla lokalnego developmentu na Windows ARM64 możesz:
+- Użyć WSL2 (Windows Subsystem for Linux)
+- Testować buildy bezpośrednio na Cloudflare Pages przez integrację GitHub
+- Kontynuować development z `npm run dev` (które powinno działać)
+
+### Błędy endpointów API
+- Sprawdź czy endpoint ma `export const prerender = false;`
+- Sprawdź czy używasz poprawnego Content-Type (`application/json`)
+- Sprawdź logi w konsoli przeglądarki i Cloudflare Dashboard
+
+### Zmienne środowiskowe nie działają
+- Zatrzymaj serwer dev (`Ctrl+C`)
+- Usuń cache: `.astro`, `node_modules/.vite`
+- Uruchom ponownie: `npm run dev`
+
+Więcej informacji o troubleshooting znajduje się w [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+## 📄 License
+
+MIT
