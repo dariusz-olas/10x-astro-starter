@@ -9,6 +9,11 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 let supabaseInstance: SupabaseClient | null = null;
 
 function getSupabaseClient(): SupabaseClient {
+  // W SSR, zwróć null lub throw error - Supabase client powinien być używany tylko w browserze
+  if (typeof window === 'undefined') {
+    throw new Error('Supabase client can only be used in browser environment');
+  }
+
   if (supabaseInstance) {
     return supabaseInstance;
   }
@@ -36,5 +41,6 @@ function getSupabaseClient(): SupabaseClient {
   return supabaseInstance;
 }
 
-export const supabase = getSupabaseClient();
+// Eksportuj funkcję zamiast instancji, aby uniknąć inicjalizacji podczas SSR
+export const supabase = typeof window !== 'undefined' ? getSupabaseClient() : null as any;
 
