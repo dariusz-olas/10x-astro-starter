@@ -20,10 +20,11 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
       console.log('🔐 Auth state changed:', _event, session?.user?.email || 'no session');
       if (session) {
         setUser(session.user);
+        setLoading(false);
       } else {
         setUser(null);
+        // Nie ustawiaj loading na false od razu - poczekaj na checkAuth
       }
-      setLoading(false);
     });
 
     return () => {
@@ -33,8 +34,17 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 
   const checkAuth = async () => {
     try {
-      // Poczekaj chwilę, aby upewnić się, że localStorage jest gotowy
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Sprawdź localStorage przed sprawdzeniem sesji
+      if (typeof window !== 'undefined') {
+        const storedSession = localStorage.getItem('supabase.auth.token');
+        console.log('🔐 localStorage check:', {
+          hasStoredSession: !!storedSession,
+          storedSessionLength: storedSession?.length || 0
+        });
+      }
+
+      // Poczekaj dłużej, aby upewnić się, że localStorage jest gotowy i sesja jest zapisana
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const {
         data: { session },
@@ -44,7 +54,8 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
       console.log('🔐 Session check:', { 
         hasSession: !!session, 
         userEmail: session?.user?.email,
-        error: error?.message 
+        error: error?.message,
+        sessionExpiresAt: session?.expires_at
       });
 
       if (error) {
@@ -52,6 +63,15 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
       }
 
       if (!session) {
+        // Sprawdź jeszcze raz localStorage
+        if (typeof window !== 'undefined') {
+          const storedSession = localStorage.getItem('supabase.auth.token');
+          console.log('🔐 No session found, localStorage:', {
+            hasStoredSession: !!storedSession,
+            storedSessionLength: storedSession?.length || 0
+          });
+        }
+        
         const redirectTo = encodeURIComponent(
           window.location.pathname + window.location.search
         );
@@ -60,6 +80,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
         return;
       }
 
+      console.log('🔐 Session found, setting user');
       setUser(session.user);
     } catch (error) {
       console.error('❌ Auth error:', error);

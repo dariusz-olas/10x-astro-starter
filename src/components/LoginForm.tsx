@@ -35,9 +35,27 @@ export default function LoginForm() {
 
       if (error) throw error;
 
-      console.log('🔐 Login successful, redirecting to:', getRedirectTo());
-      // Poczekaj chwilę, aby upewnić się, że sesja jest zapisana w localStorage
-      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('🔐 Login successful, checking session...');
+      
+      // Sprawdź czy sesja jest zapisana
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 Session after login:', {
+        hasSession: !!session,
+        userEmail: session?.user?.email
+      });
+
+      // Sprawdź localStorage
+      if (typeof window !== 'undefined') {
+        const storedSession = localStorage.getItem('supabase.auth.token');
+        console.log('🔐 localStorage after login:', {
+          hasStoredSession: !!storedSession,
+          storedSessionLength: storedSession?.length || 0
+        });
+      }
+
+      console.log('🔐 Redirecting to:', getRedirectTo());
+      // Poczekaj dłużej, aby upewnić się, że sesja jest zapisana w localStorage
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Redirect to original page or dashboard
       window.location.href = getRedirectTo();
