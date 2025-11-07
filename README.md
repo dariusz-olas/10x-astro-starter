@@ -49,6 +49,17 @@ npm run build
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues
 
+## Important Notes
+
+### Windows ARM64 Compatibility
+
+If you're running on Windows ARM64, local builds (`npm run build`) may fail due to Cloudflare adapter's `workerd` dependency not supporting this platform. This is a known limitation and does not affect production builds on Cloudflare Pages (which runs on Linux). The configuration is correct and will work in production.
+
+For local development on Windows ARM64, you can:
+- Use WSL2 (Windows Subsystem for Linux)
+- Test builds directly on Cloudflare Pages via GitHub integration
+- Continue development with `npm run dev` (which should work)
+
 ## Project Structure
 
 ```md

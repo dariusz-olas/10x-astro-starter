@@ -1,20 +1,30 @@
 // @ts-check
 import { defineConfig } from "astro/config";
-
+import cloudflare from "@astrojs/cloudflare";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
-import node from "@astrojs/node";
 
 // https://astro.build/config
 export default defineConfig({
-  output: "server",
-  integrations: [react(), sitemap()],
-  server: { port: 3000 },
+  integrations: [
+    react(),
+    sitemap()
+  ],
+  adapter: cloudflare(),
+  output: "server", // SSR dla endpointów API
   vite: {
+    envPrefix: "PUBLIC_",
     plugins: [tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          // Cache-busting dla JS
+          entryFileNames: "assets/[name].[hash].js",
+          chunkFileNames: "assets/[name].[hash].js",
+          // CSS jest obsługiwany przez Astro/Tailwind automatycznie
+        },
+      },
+    },
   },
-  adapter: node({
-    mode: "standalone",
-  }),
 });
