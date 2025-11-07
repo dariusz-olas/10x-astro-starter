@@ -26,7 +26,13 @@ function getSupabaseClient(): SupabaseClient {
     );
   }
 
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
   return supabaseInstance;
 }
 
