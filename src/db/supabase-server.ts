@@ -1,5 +1,5 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AstroCookies } from 'astro';
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { AstroCookies } from "astro";
 
 // 🔒 SECURITY: Serwerowy klient Supabase dla endpointów API
 // Używa tego samego klucza anon, ale może być rozszerzony o service role key dla operacji admin
@@ -8,16 +8,16 @@ import type { AstroCookies } from 'astro';
 // - PUBLIC_SUPABASE_ANON_KEY
 
 export function createServerSupabaseClient(cookies: AstroCookies): SupabaseClient {
-  const supabaseUrl = String(import.meta.env.PUBLIC_SUPABASE_URL || '').trim();
-  const supabaseAnonKey = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '').trim();
+  const supabaseUrl = String(import.meta.env.PUBLIC_SUPABASE_URL || "").trim();
+  const supabaseAnonKey = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      'Supabase credentials are required.\n' +
-        'Dodaj do pliku .env:\n' +
-        '  PUBLIC_SUPABASE_URL=twoj-url\n' +
-        '  PUBLIC_SUPABASE_ANON_KEY=twoj-klucz\n' +
-        'Pobierz wartości z: Supabase Dashboard -> Settings -> API'
+      "Supabase credentials are required.\n" +
+        "Dodaj do pliku .env:\n" +
+        "  PUBLIC_SUPABASE_URL=twoj-url\n" +
+        "  PUBLIC_SUPABASE_ANON_KEY=twoj-klucz\n" +
+        "Pobierz wartości z: Supabase Dashboard -> Settings -> API"
     );
   }
 
@@ -37,4 +37,3 @@ export function createServerSupabaseClient(cookies: AstroCookies): SupabaseClien
 
   return client;
 }
-

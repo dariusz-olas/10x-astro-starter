@@ -55,4 +55,3 @@ export interface ReviewSession {
   cards_correct: number;
   accuracy: number;
 }
-

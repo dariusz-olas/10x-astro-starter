@@ -1,9 +1,15 @@
 ---
-import '../styles/global.css';
-import AuthWrapper from '../components/AuthWrapper';
-import DashboardContent from '../components/DashboardContent';
+import "../styles/global.css";
+import AuthWrapper from "../components/AuthWrapper";
+import DashboardContent from "../components/DashboardContent";
+import { setupClientErrorHandlers } from "../lib/logger-client";
 
 export const prerender = false;
+
+// Initialize global error handlers
+if (typeof window !== "undefined") {
+  setupClientErrorHandlers();
+}
 ---
 
 <html lang="pl">
@@ -32,4 +38,3 @@ export const prerender = false;
     </div>
   </body>
 </html>
-

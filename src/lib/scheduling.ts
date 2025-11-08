@@ -18,7 +18,7 @@ export interface GradeResult {
 
 /**
  * Algorytm SM-2 lite: oblicza nowy stan harmonogramu na podstawie oceny
- * 
+ *
  * Oceny:
  * - 0 (Again): Reset repetitions, zmniejsz ease o 20
  * - 1 (Hard): Zwiększ repetitions, mały interval
@@ -61,4 +61,3 @@ export function nextDueAt(intervalDays: number, from: Date = new Date()): Date {
   due.setUTCDate(due.getUTCDate() + Math.max(0, intervalDays));
   return due;
 }
-

@@ -130,6 +130,9 @@ Projekt zawiera testy E2E z perspektywy użytkownika, które weryfikują pełny 
 # Uruchom wszystkie testy E2E
 npm run test:e2e
 
+# Uruchom testy weryfikujące logowanie i autoryzację
+npm run test:e2e:logging
+
 # Uruchom testy z interfejsem graficznym
 npm run test:e2e:ui
 
@@ -145,6 +148,10 @@ npm run test:e2e:debug
 - Serwer deweloperski (`npm run dev`) musi być uruchomiony lub zostanie uruchomiony automatycznie przez Playwright
 
 **Uwaga:** Testy E2E używają prawdziwego Supabase, więc każdy test tworzy unikalnego użytkownika (email z timestampem). Testy są uruchamiane automatycznie w CI/CD, jeśli dostępne są zmienne środowiskowe Supabase (nie blokują builda jeśli brakuje zmiennych).
+
+**Testy weryfikujące logowanie:**
+- `tests/e2e/logging-and-auth.spec.ts` - Testuje autoryzację w requestach API i weryfikuje nagłówki Authorization
+- `tests/e2e/logs-verification.spec.ts` - Weryfikuje logi serwerowe po wykonaniu akcji (sprawdza requestId, brak błędów, statusy)
 
 ## 🔒 Bezpieczeństwo
 
@@ -195,6 +202,66 @@ Dla lokalnego developmentu na Windows ARM64 możesz:
 - Użyć WSL2 (Windows Subsystem for Linux)
 - Testować buildy bezpośrednio na Cloudflare Pages przez integrację GitHub
 - Kontynuować development z `npm run dev` (które powinno działać)
+
+### Development w WSL2
+
+Jeśli używasz WSL2 do lokalnego developmentu, pamiętaj o następujących kwestiach:
+
+**Cache i pliki tymczasowe:**
+- Cache Astro (`.astro/`) i Vite (`node_modules/.vite/`) są tworzone w systemie plików WSL2
+- Logi aplikacji (`logs/`) są również tworzone w WSL2
+- Jeśli widzisz błędy kompilacji lub stare wersje kodu, wyczyść cache:
+
+```bash
+# W terminalu WSL2
+npm run clean:cache
+# lub ręcznie:
+rm -rf .astro node_modules/.vite dist
+```
+
+**Ścieżki plików:**
+- W WSL2 ścieżki Windows są dostępne przez `/mnt/c/...`
+- Kod używa względnych ścieżek (`logs/`, `src/`), więc działa w obu środowiskach
+- Komunikaty błędów mogą pokazywać ścieżki WSL2 (`/mnt/c/...`) zamiast Windows (`C:\...`)
+
+**Synchronizacja między środowiskami:**
+- Pliki są współdzielone między Windows i WSL2 (ten sam system plików)
+- Cache i `node_modules` mogą być różne - zawsze używaj tego samego środowiska
+- Zalecane: używaj WSL2 **lub** Windows, nie mieszaj
+
+**Najlepsze praktyki:**
+- Zawsze używaj tego samego środowiska (WSL2 lub Windows) w jednej sesji
+- Po zmianie środowiska, wyczyść cache: `npm run clean:cache`
+- Jeśli widzisz błędy "Cannot access before initialization" lub podobne, wyczyść cache
+
+### Zarządzanie logami
+
+**Wyczyść wszystkie logi:**
+```bash
+npm run logs:clear
+```
+
+**Wyświetl logi na żywo:**
+```bash
+# Wszystkie logi
+npm run logs:view
+
+# Tylko błędy
+npm run logs:error
+```
+
+**Kontrola logowania przez zmienne środowiskowe:**
+
+Dodaj do pliku `.env`:
+```env
+# Wyłącz logowanie do plików (tylko console)
+LOG_ENABLED=false
+
+# Zmień minimalny poziom logowania (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOG_LEVEL=INFO
+```
+
+Więcej informacji o logowaniu znajduje się w [LOGGING.md](./LOGGING.md)
 
 ### Błędy endpointów API
 - Sprawdź czy endpoint ma `export const prerender = false;`

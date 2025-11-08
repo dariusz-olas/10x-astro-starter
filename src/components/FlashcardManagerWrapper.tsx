@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import FlashcardManager from './FlashcardManager';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from "react";
+import FlashcardManager from "./FlashcardManager";
+import { supabase } from "../lib/supabase";
 
 export default function FlashcardManagerWrapper() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -23,4 +23,3 @@ export default function FlashcardManagerWrapper() {
 
   return <FlashcardManager userId={userId} />;
 }
-

@@ -5,21 +5,31 @@
  */
 export function formatDatePL(dateString: string | Date | null | undefined): string | null {
   if (!dateString) return null;
-  
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-  
+
+  const date = typeof dateString === "string" ? new Date(dateString) : dateString;
+
   // Sprawdź czy data jest poprawna
   if (isNaN(date.getTime())) return null;
-  
+
   const monthsPL = [
-    'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
-    'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'
+    "stycznia",
+    "lutego",
+    "marca",
+    "kwietnia",
+    "maja",
+    "czerwca",
+    "lipca",
+    "sierpnia",
+    "września",
+    "października",
+    "listopada",
+    "grudnia",
   ];
-  
+
   const day = date.getDate();
   const month = monthsPL[date.getMonth()];
   const year = date.getFullYear();
-  
+
   return `${day} ${month} ${year}`;
 }
 
@@ -30,6 +40,5 @@ export function formatDatePL(dateString: string | Date | null | undefined): stri
  */
 export function formatDateOrDefault(dateString: string | Date | null | undefined): string {
   const formatted = formatDatePL(dateString);
-  return formatted || 'Jeszcze nie zacząłeś';
+  return formatted || "Jeszcze nie zacząłeś";
 }
-

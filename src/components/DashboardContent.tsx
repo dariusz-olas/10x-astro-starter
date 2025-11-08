@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import DashboardNav from './DashboardNav';
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import DashboardNav from "./DashboardNav";
 
 interface DashboardStats {
   totalCards: number;
@@ -15,7 +15,7 @@ export default function DashboardContent() {
     totalCards: 0,
     lastReview: null,
     accuracy: 0,
-    mostUsedTags: []
+    mostUsedTags: [],
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -29,27 +29,29 @@ export default function DashboardContent() {
       setError(null);
 
       // Pobierz token z sesji Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
-        const redirectTo = encodeURIComponent('/dashboard');
+        const redirectTo = encodeURIComponent("/dashboard");
         window.location.href = `/login?redirect=${redirectTo}`;
         return;
       }
 
       // AuthWrapper już sprawdził autentykację, więc możemy bezpiecznie pobrać statystyki
-      const res = await fetch('/api/dashboard/stats', {
-        method: 'GET',
-        credentials: 'include', // Ważne: wysyłaj cookies
+      const res = await fetch("/api/dashboard/stats", {
+        method: "GET",
+        credentials: "include", // Ważne: wysyłaj cookies
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
       if (!res.ok) {
         if (res.status === 401) {
           // Jeśli 401, przekieruj do logowania
-          const redirectTo = encodeURIComponent('/dashboard');
+          const redirectTo = encodeURIComponent("/dashboard");
           window.location.href = `/login?redirect=${redirectTo}`;
           return;
         }
@@ -62,11 +64,11 @@ export default function DashboardContent() {
         totalCards: data.totalCards || 0,
         lastReview: data.lastReview || null,
         accuracy: data.accuracy || 0,
-        mostUsedTags: data.mostUsedTags || []
+        mostUsedTags: data.mostUsedTags || [],
       });
     } catch (err: any) {
-      console.error('❌ Błąd pobierania statystyk:', err);
-      setError(err.message || 'Błąd podczas pobierania statystyk');
+      console.error("❌ Błąd pobierania statystyk:", err);
+      setError(err.message || "Błąd podczas pobierania statystyk");
     } finally {
       setLoading(false);
     }
@@ -85,10 +87,7 @@ export default function DashboardContent() {
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
         <p className="font-semibold">Błąd</p>
         <p className="text-sm">{error}</p>
-        <button
-          onClick={fetchStats}
-          className="mt-2 text-sm underline hover:no-underline"
-        >
+        <button onClick={fetchStats} className="mt-2 text-sm underline hover:no-underline">
           Spróbuj ponownie
         </button>
       </div>
@@ -101,7 +100,7 @@ export default function DashboardContent() {
       <section className="mb-8">
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
           <h2 className="text-2xl font-semibold mb-6 text-gray-800">Twoje statystyki</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Licznik fiszek */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
@@ -122,7 +121,7 @@ export default function DashboardContent() {
                 <div className="flex-1">
                   <p className="text-sm text-gray-600 font-medium">Ostatnia powtórka</p>
                   <p className="text-sm font-bold text-gray-900 break-words">
-                    {stats.lastReview || 'Jeszcze nie zacząłeś'}
+                    {stats.lastReview || "Jeszcze nie zacząłeś"}
                   </p>
                   <p className="text-xs text-gray-500"></p>
                 </div>
@@ -163,10 +162,7 @@ export default function DashboardContent() {
             <h2 className="text-2xl font-semibold mb-4 text-gray-800">Najczęstsze tagi</h2>
             <div className="flex flex-wrap gap-2">
               {stats.mostUsedTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
-                >
+                <span key={tag} className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
                   {tag}
                 </span>
               ))}
@@ -202,4 +198,3 @@ export default function DashboardContent() {
     </>
   );
 }
-

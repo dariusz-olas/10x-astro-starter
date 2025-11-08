@@ -15,7 +15,15 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:logging": "playwright test tests/e2e/logging-and-auth.spec.ts tests/e2e/logs-verification.spec.ts",
+    "test:e2e:verify": "playwright test tests/e2e/logging-and-auth.spec.ts tests/e2e/logs-verification.spec.ts && node scripts/verify-logs-after-tests.js",
+    "test:e2e:all": "playwright test",
+    "clean:cache": "rm -rf .astro node_modules/.vite dist || rmdir /s /q .astro node_modules\\.vite dist 2>nul || true",
+    "clean:all": "npm run clean:cache && rm -rf node_modules package-lock.json || rmdir /s /q node_modules package-lock.json 2>nul || true",
+    "logs:clear": "rm -rf logs/*.log || del /q logs\\*.log 2>nul || true",
+    "logs:view": "tail -f logs/app-$(date +%Y-%m-%d).log 2>/dev/null || type logs\\app-*.log 2>nul || echo 'No logs found'",
+    "logs:error": "tail -f logs/error-$(date +%Y-%m-%d).log 2>/dev/null || type logs\\error-*.log 2>nul || echo 'No error logs found'"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.10",

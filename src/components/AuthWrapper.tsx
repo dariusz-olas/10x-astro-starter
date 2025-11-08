@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import type { User } from "@supabase/supabase-js";
+import { createClientLogger } from "../lib/logger-client";
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface AuthWrapperProps {
 export default function AuthWrapper({ children }: AuthWrapperProps) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [logger] = useState(() => createClientLogger({ component: "AuthWrapper" }));
 
   useEffect(() => {
     checkAuth();
@@ -16,12 +18,17 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     // Nasłuchuj zmian w sesji
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('🔐 Auth state changed:', _event, session?.user?.email || 'no session');
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
+        const userLogger = logger.withContext({
+          userId: session.user.id,
+          userEmail: session.user.email,
+        });
+        await userLogger.debug("Auth state changed", { event: _event });
         setUser(session.user);
         setLoading(false);
       } else {
+        await logger.debug("Auth state changed - no session", { event: _event });
         setUser(null);
         // Nie ustawiaj loading na false od razu - poczekaj na checkAuth
       }
@@ -34,56 +41,36 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 
   const checkAuth = async () => {
     try {
-      // Sprawdź localStorage przed sprawdzeniem sesji
-      if (typeof window !== 'undefined') {
-        const storedSession = localStorage.getItem('supabase.auth.token');
-        console.log('🔐 localStorage check:', {
-          hasStoredSession: !!storedSession,
-          storedSessionLength: storedSession?.length || 0
-        });
-      }
-
       // Poczekaj dłużej, aby upewnić się, że localStorage jest gotowy i sesja jest zapisana
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await logger.debug("Checking authentication");
+
       const {
         data: { session },
         error,
       } = await supabase.auth.getSession();
 
-      console.log('🔐 Session check:', { 
-        hasSession: !!session, 
-        userEmail: session?.user?.email,
-        error: error?.message,
-        sessionExpiresAt: session?.expires_at
-      });
-
       if (error) {
-        console.error('❌ Session error:', error);
+        await logger.error("Session check failed", {}, error);
       }
 
       if (!session) {
-        // Sprawdź jeszcze raz localStorage
-        if (typeof window !== 'undefined') {
-          const storedSession = localStorage.getItem('supabase.auth.token');
-          console.log('🔐 No session found, localStorage:', {
-            hasStoredSession: !!storedSession,
-            storedSessionLength: storedSession?.length || 0
-          });
-        }
-        
-        const redirectTo = encodeURIComponent(
-          window.location.pathname + window.location.search
-        );
-        console.log('🔐 No session, redirecting to login');
+        await logger.warning("No session found, redirecting to login", {
+          pathname: window.location.pathname,
+        });
+        const redirectTo = encodeURIComponent(window.location.pathname + window.location.search);
         window.location.href = `/login?redirect=${redirectTo}`;
         return;
       }
 
-      console.log('🔐 Session found, setting user');
+      const userLogger = logger.withContext({
+        userId: session.user.id,
+        userEmail: session.user.email,
+      });
+      await userLogger.debug("Session found, user authenticated");
       setUser(session.user);
     } catch (error) {
-      console.error('❌ Auth error:', error);
+      await logger.error("Authentication check failed", {}, error);
       const redirectTo = encodeURIComponent(window.location.pathname);
       window.location.href = `/login?redirect=${redirectTo}`;
     } finally {
@@ -105,4 +92,3 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 
   return <>{children}</>;
 }
-

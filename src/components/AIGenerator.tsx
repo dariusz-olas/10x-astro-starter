@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { createClientLogger } from "../lib/logger-client";
 
 interface GeneratedFlashcard {
   front: string;
@@ -7,13 +8,26 @@ interface GeneratedFlashcard {
 }
 
 export default function AIGenerator() {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [generating, setGenerating] = useState(false);
   const [flashcards, setFlashcards] = useState<GeneratedFlashcard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [logger] = useState(() => createClientLogger({ component: "AIGenerator" }));
+
+  // Get user context when component mounts
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        logger.withContext({
+          userId: session.user.id,
+          userEmail: session.user.email,
+        });
+      }
+    });
+  }, [logger]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,11 +38,31 @@ export default function AIGenerator() {
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/generate-flashcards', {
-        method: 'POST',
+      await logger.info("Starting flashcard generation", { textLength: text.length });
+
+      // Pobierz sesję i token przed wysłaniem requestu
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        const error = new Error("Musisz być zalogowany aby generować fiszki");
+        await logger.error("Unauthorized flashcard generation attempt", {}, error);
+        throw error;
+      }
+
+      const userLogger = logger.withContext({
+        userId: session.user.id,
+        userEmail: session.user.email,
+      });
+
+      const response = await fetch("/api/generate-flashcards", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
+        credentials: "include",
         body: JSON.stringify({ text }),
       });
 
@@ -40,11 +74,18 @@ export default function AIGenerator() {
       const data = await response.json();
       const generatedCards = data.flashcards || [];
       setFlashcards(generatedCards);
-      
+
+      await userLogger.info("Flashcards generated successfully", {
+        count: generatedCards.length,
+      });
+
       // Automatycznie zaznacz wszystkie
       setSelectedCards(new Set(generatedCards.map((_: any, idx: number) => idx)));
     } catch (err: any) {
-      setError(err.message || 'Błąd podczas generowania fiszek');
+      await logger.error("Flashcard generation failed", {
+        textLength: text.length,
+      }, err);
+      setError(err.message || "Błąd podczas generowania fiszek");
     } finally {
       setGenerating(false);
     }
@@ -70,7 +111,7 @@ export default function AIGenerator() {
 
   const handleSave = async () => {
     if (selectedCards.size === 0) {
-      setError('Wybierz przynajmniej jedną fiszkę do zapisania');
+      setError("Wybierz przynajmniej jedną fiszkę do zapisania");
       return;
     }
 
@@ -85,13 +126,13 @@ export default function AIGenerator() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        throw new Error('Musisz być zalogowany aby zapisać fiszki');
+        throw new Error("Musisz być zalogowany aby zapisać fiszki");
       }
 
       // Przygotuj fiszki do zapisania
       const cardsToSave = flashcards.filter((_, idx) => selectedCards.has(idx));
 
-      const { error: insertError } = await supabase.from('flashcards').insert(
+      const { error: insertError } = await supabase.from("flashcards").insert(
         cardsToSave.map((card) => ({
           user_id: session.user.id,
           front: card.front,
@@ -100,19 +141,28 @@ export default function AIGenerator() {
         }))
       );
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        await logger.error("Failed to save flashcards", {
+          count: cardsToSave.length,
+        }, insertError);
+        throw insertError;
+      }
+
+      await logger.info("Flashcards saved successfully", {
+        count: cardsToSave.length,
+      });
 
       setSuccess(`Zapisano ${cardsToSave.length} fiszek!`);
-      
+
       // Wyczyść formularz i wyniki po 2 sekundach
       setTimeout(() => {
-        setText('');
+        setText("");
         setFlashcards([]);
         setSelectedCards(new Set());
         setSuccess(null);
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Błąd podczas zapisywania fiszek');
+      setError(err.message || "Błąd podczas zapisywania fiszek");
     } finally {
       setSaving(false);
     }
@@ -133,15 +183,11 @@ export default function AIGenerator() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
               placeholder="Wklej tutaj tekst, z którego chcesz wygenerować fiszki..."
             />
-            <p className="mt-2 text-sm text-gray-500">
-              AI przeanalizuje tekst i wygeneruje 5-15 fiszek edukacyjnych
-            </p>
+            <p className="mt-2 text-sm text-gray-500">AI przeanalizuje tekst i wygeneruje 5-15 fiszek edukacyjnych</p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
           )}
 
           {success && (
@@ -155,7 +201,7 @@ export default function AIGenerator() {
             disabled={generating || !text.trim()}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50"
           >
-            {generating ? '⚡ Generowanie...' : '🤖 Generuj fiszki'}
+            {generating ? "⚡ Generowanie..." : "🤖 Generuj fiszki"}
           </button>
         </form>
       </div>
@@ -164,9 +210,7 @@ export default function AIGenerator() {
       {flashcards.length > 0 && (
         <div className="bg-white rounded-2xl shadow-xl p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Wygenerowane fiszki ({flashcards.length})
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-800">Wygenerowane fiszki ({flashcards.length})</h2>
             <div className="flex gap-2">
               <button
                 onClick={selectAll}
@@ -188,9 +232,7 @@ export default function AIGenerator() {
               <div
                 key={index}
                 className={`border-2 rounded-xl p-4 transition ${
-                  selectedCards.has(index)
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 bg-white'
+                  selectedCards.has(index) ? "border-purple-500 bg-purple-50" : "border-gray-200 bg-white"
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -220,9 +262,7 @@ export default function AIGenerator() {
             disabled={saving || selectedCards.size === 0}
             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50"
           >
-            {saving
-              ? '💾 Zapisywanie...'
-              : `✅ Zapisz wybrane (${selectedCards.size}/${flashcards.length})`}
+            {saving ? "💾 Zapisywanie..." : `✅ Zapisz wybrane (${selectedCards.size}/${flashcards.length})`}
           </button>
         </div>
       )}
@@ -240,4 +280,3 @@ export default function AIGenerator() {
     </div>
   );
 }
-

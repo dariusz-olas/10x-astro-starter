@@ -1,7 +1,13 @@
 ---
-import '../styles/global.css';
-import AuthWrapper from '../components/AuthWrapper';
-import ReviewSession from '../components/ReviewSession';
+import "../styles/global.css";
+import AuthWrapper from "../components/AuthWrapper";
+import ReviewSession from "../components/ReviewSession";
+import { setupClientErrorHandlers } from "../lib/logger-client";
+
+// Initialize global error handlers
+if (typeof window !== "undefined") {
+  setupClientErrorHandlers();
+}
 ---
 
 <html lang="pl">
@@ -39,4 +45,3 @@ import ReviewSession from '../components/ReviewSession';
     </div>
   </body>
 </html>
-

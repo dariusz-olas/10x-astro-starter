@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -30,7 +30,7 @@ export function useAuth() {
       } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
     } catch (error) {
-      console.error('Error checking session:', error);
+      console.error("Error checking session:", error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -40,9 +40,9 @@ export function useAuth() {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      window.location.href = '/login';
+      window.location.href = "/login";
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -53,4 +53,3 @@ export function useAuth() {
     isAuthenticated: !!user,
   };
 }
-

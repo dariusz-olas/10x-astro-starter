@@ -7,10 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [
-    react(),
-    sitemap()
-  ],
+  integrations: [react(), sitemap()],
   adapter: cloudflare(),
   output: "server", // SSR dla endpointów API
   vite: {
