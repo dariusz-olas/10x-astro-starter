@@ -42,3 +42,38 @@ export function formatDateOrDefault(dateString: string | Date | null | undefined
   const formatted = formatDatePL(dateString);
   return formatted || "Jeszcze nie zacząłeś";
 }
+
+/**
+ * Zwraca datę początku tygodnia (poniedziałek) dla obecnego tygodnia
+ * @returns Data początku tygodnia jako ISO string
+ */
+export function getWeekStart(): string {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = niedziela, 1 = poniedziałek, ...
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Poniedziałek jako początek tygodnia
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() + diff);
+  weekStart.setHours(0, 0, 0, 0);
+  return weekStart.toISOString();
+}
+
+/**
+ * Zwraca datę początku miesiąca dla obecnego miesiąca
+ * @returns Data początku miesiąca jako ISO string
+ */
+export function getMonthStart(): string {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  monthStart.setHours(0, 0, 0, 0);
+  return monthStart.toISOString();
+}
+
+/**
+ * Zwraca aktualną datę jako ISO string (bez czasu)
+ * @returns Dzisiejsza data jako ISO string
+ */
+export function getTodayISO(): string {
+  const now = new Date();
+  now.setHours(23, 59, 59, 999); // Koniec dnia
+  return now.toISOString();
+}

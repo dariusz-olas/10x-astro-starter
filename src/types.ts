@@ -55,3 +55,50 @@ export interface ReviewSession {
   cards_correct: number;
   accuracy: number;
 }
+
+// Typy dla statystyk dashboard
+export interface DashboardStats {
+  // Obecne podstawowe statystyki
+  totalCards: number;
+  lastReview: string | null;
+  accuracy: number; // poprawność ostatniej sesji
+  mostUsedTags: string[];
+
+  // Nowe - Statystyki powtórek
+  totalReviews: number; // łączna liczba powtórek
+  averageAccuracy: number; // średnia poprawność ze wszystkich sesji
+  longestStreak: number; // najdłuższa seria dni z powtórkami
+  cardsDueToday: number; // fiszki do powtórki dzisiaj
+
+  // Nowe - Statystyki algorytmu SM-2
+  averageEase: number; // średni ease factor
+  averageInterval: number; // średni interwał powtórek (dni)
+  newCards: number; // fiszki nowe (repetitions = 0)
+  learningCards: number; // fiszki w nauce (repetitions > 0, interval < 30)
+  masteredCards: number; // fiszki opanowane (interval >= 30)
+
+  // Nowe - Statystyki czasowe
+  cardsAddedThisWeek: number; // fiszki dodane w tym tygodniu
+  cardsAddedThisMonth: number; // fiszki dodane w tym miesiącu
+  activeDaysLast7Days: number; // dni z aktywnością w ostatnich 7 dniach
+  activeDaysLast30Days: number; // dni z aktywnością w ostatnich 30 dniach
+  mostActiveDayOfWeek: string | null; // najaktywniejszy dzień tygodnia
+}
+
+// Typy dla historii powtórek (dla przyszłych faz)
+export interface ReviewHistoryItem {
+  id: string;
+  completedAt: string;
+  cardsReviewed: number;
+  cardsCorrect: number;
+  accuracy: number;
+}
+
+// Typy dla statystyk per tag (dla przyszłych faz)
+export interface TagStat {
+  tag: string;
+  cardCount: number;
+  averageAccuracy: number;
+  lastReview: string | null;
+  cardsDue: number;
+}
