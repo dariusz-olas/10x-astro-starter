@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import AuthWrapper from "../components/AuthWrapper";
 import DashboardContent from "../components/DashboardContent";
+import AppLayout from "../components/AppLayout";
 import { setupClientErrorHandlers } from "../lib/logger-client";
 
 export const prerender = false;
@@ -32,7 +33,9 @@ if (typeof window !== "undefined") {
 
         <!-- Dashboard Content -->
         <AuthWrapper client:load>
-          <DashboardContent client:only="react" />
+          <AppLayout client:load>
+            <DashboardContent client:only="react" />
+          </AppLayout>
         </AuthWrapper>
       </div>
     </div>

@@ -1,0 +1,13 @@
+# Changelog
+
+Wszystkie znaczące zmiany w projekcie będą dokumentowane w tym pliku.
+
+Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/),
+i ten projekt adheres to [Semantic Versioning](https://semver.org/lang/pl/).
+
+## [2025-11-10.1] - 2025-11-10
+### Added
+- System wersjonowania aplikacji
+- Automatyczne zapisywanie zmian do CHANGELOG.md
+- Wyświetlanie wersji w UI (prawy dolny róg)
+- Menu użytkownika w UI (prawy górny róg)

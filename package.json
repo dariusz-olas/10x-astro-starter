@@ -26,7 +26,10 @@
     "clean:all": "npm run clean:cache && rm -rf node_modules package-lock.json || rmdir /s /q node_modules package-lock.json 2>nul || true",
     "logs:clear": "rm -rf logs/*.log || del /q logs\\*.log 2>nul || true",
     "logs:view": "tail -f logs/app-$(date +%Y-%m-%d).log 2>/dev/null || type logs\\app-*.log 2>nul || echo 'No logs found'",
-    "logs:error": "tail -f logs/error-$(date +%Y-%m-%d).log 2>/dev/null || type logs\\error-*.log 2>nul || echo 'No error logs found'"
+    "logs:error": "tail -f logs/error-$(date +%Y-%m-%d).log 2>/dev/null || type logs\\error-*.log 2>nul || echo 'No error logs found'",
+    "version:update": "node scripts/update-version.js",
+    "version:changelog": "node scripts/update-changelog.js",
+    "version:bump": "node scripts/update-changelog.js"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.10",

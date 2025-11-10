@@ -271,6 +271,35 @@ LOG_LEVEL=INFO
 
 Więcej informacji o logowaniu znajduje się w [LOGGING.md](./LOGGING.md)
 
+## 📦 System Wersjonowania
+
+Aplikacja używa systemu wersjonowania w formacie `data.numer` (np. `2025-11-10.1`).
+
+### Automatyczne aktualizowanie wersji
+
+Wersja jest automatycznie aktualizowana przy każdym commicie dzięki pre-commit hook (Husky).
+
+### Ręczne aktualizowanie wersji
+
+```bash
+# Tylko aktualizuj wersję
+npm run version:update
+
+# Aktualizuj wersję i dodaj wpis do CHANGELOG.md
+npm run version:changelog
+
+# Z własnym komunikatem
+node scripts/update-changelog.js "Opis zmian"
+```
+
+### Wyświetlanie wersji
+
+Wersja aplikacji jest wyświetlana w prawym dolnym rogu wszystkich stron chronionych.
+
+### Historia zmian
+
+Wszystkie zmiany są dokumentowane w pliku `CHANGELOG.md`.
+
 ### Błędy endpointów API
 - Sprawdź czy endpoint ma `export const prerender = false;`
 - Sprawdź czy używasz poprawnego Content-Type (`application/json`)

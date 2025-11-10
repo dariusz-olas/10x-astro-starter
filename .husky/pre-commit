@@ -1,1 +1,10 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
 npx lint-staged
+
+# Aktualizuj wersję i changelog
+node scripts/update-changelog.js "Automatyczna aktualizacja wersji"
+
+# Dodaj zaktualizowane pliki do commit
+git add VERSION CHANGELOG.md

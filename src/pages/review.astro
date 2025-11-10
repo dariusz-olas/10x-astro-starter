@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import AuthWrapper from "../components/AuthWrapper";
 import ReviewSession from "../components/ReviewSession";
+import AppLayout from "../components/AppLayout";
 import { setupClientErrorHandlers } from "../lib/logger-client";
 
 // Initialize global error handlers
@@ -39,7 +40,9 @@ if (typeof window !== "undefined") {
         </header>
 
         <AuthWrapper client:load>
-          <ReviewSession client:load />
+          <AppLayout client:load>
+            <ReviewSession client:load />
+          </AppLayout>
         </AuthWrapper>
       </div>
     </div>
