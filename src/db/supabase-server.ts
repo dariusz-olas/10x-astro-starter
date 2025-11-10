@@ -22,6 +22,11 @@ export function createServerSupabaseClient(cookies: AstroCookies): SupabaseClien
   }
 
   const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false, // Nie przechowuj sesji po stronie serwera
+      autoRefreshToken: false, // Nie odświeżaj tokenu automatycznie
+      detectSessionInUrl: false, // Nie wykrywaj sesji w URL
+    },
     cookies: {
       get(name: string) {
         return cookies.get(name)?.value;
@@ -31,6 +36,11 @@ export function createServerSupabaseClient(cookies: AstroCookies): SupabaseClien
       },
       remove(name: string, options?: any) {
         cookies.delete(name, options);
+      },
+    },
+    global: {
+      headers: {
+        // Headers będą ustawiane dynamicznie przez setSession
       },
     },
   });

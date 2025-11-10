@@ -24,27 +24,62 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       } = await supabase.auth.getUser(token);
 
       if (!userError && user) {
-        // Ustaw sesję w Supabase client, aby mógł wykonywać zapytania
+        // WAŻNE: Dla RLS musimy ustawić sesję w Supabase client
+        // Spróbuj najpierw pobrać refresh_token z cookies
+        const refreshTokenCookie = cookies.get("sb-access-token")?.value || cookies.get("sb-refresh-token")?.value;
+        
+        // Ustaw sesję w Supabase client - RLS wymaga poprawnej sesji
         const {
           data: { session: tokenSession },
           error: sessionError,
         } = await supabase.auth.setSession({
           access_token: token,
-          refresh_token: "",
+          refresh_token: refreshTokenCookie || token,
         });
 
         if (!sessionError && tokenSession) {
           session = tokenSession;
+          await logger.info("Session set via setSession", {
+            userId: session.user.id,
+            hasAccessToken: !!session.access_token,
+            hasRefreshToken: !!session.refresh_token,
+          });
         } else {
-          // Jeśli setSession nie działa, utwórz obiekt sesji z user
-          session = {
-            user: user,
+          // Jeśli setSession nie działa, spróbuj użyć getUser do weryfikacji
+          await logger.warning("setSession failed, trying alternative", {
+            sessionError: sessionError?.message,
+            hasRefreshTokenCookie: !!refreshTokenCookie,
+            userId: user.id,
+          });
+          
+          // Spróbuj jeszcze raz z pustym refresh_token
+          const {
+            data: { session: retrySession },
+            error: retryError,
+          } = await supabase.auth.setSession({
             access_token: token,
             refresh_token: "",
-            expires_in: 3600,
-            expires_at: Math.floor(Date.now() / 1000) + 3600,
-            token_type: "bearer",
-          } as any;
+          });
+          
+          if (!retryError && retrySession) {
+            session = retrySession;
+            await logger.info("Session set via retry setSession", {
+              userId: retrySession.user.id,
+            });
+          } else {
+            await logger.warning("All setSession attempts failed, using manual session", {
+              retryError: retryError?.message,
+              userId: user.id,
+            });
+            session = {
+              user: user,
+              access_token: token,
+              refresh_token: refreshTokenCookie || "",
+              expires_in: 3600,
+              expires_at: Math.floor(Date.now() / 1000) + 3600,
+              token_type: "bearer",
+            } as any;
+          }
         }
       }
     }
@@ -53,8 +88,35 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     if (!session) {
       const {
         data: { session: cookieSession },
+        error: cookieError,
       } = await supabase.auth.getSession();
-      session = cookieSession;
+      
+      if (cookieSession) {
+        session = cookieSession;
+        await logger.info("Session retrieved from cookies", {
+          userId: session.user.id,
+          hasAccessToken: !!session.access_token,
+          hasRefreshToken: !!session.refresh_token,
+        });
+        
+        // WAŻNE: Upewnij się, że sesja z cookies jest ustawiona w Supabase client dla RLS
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token || "",
+        });
+        
+        if (setSessionError) {
+          await logger.warning("Failed to set session from cookies", {
+            error: setSessionError.message,
+          });
+        } else {
+          await logger.info("Session from cookies set successfully in Supabase client");
+        }
+      } else {
+        await logger.debug("No session in cookies", {
+          cookieError: cookieError?.message,
+        });
+      }
     }
 
     if (!session) {
@@ -102,6 +164,34 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    // WAŻNE: Upewnij się, że sesja jest ustawiona przed zapytaniem do bazy
+    // RLS wymaga poprawnej sesji w Supabase client
+    if (session?.access_token) {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (!currentSession || currentSession.user.id !== userId) {
+        await userLogger.warning("Session mismatch before query, resetting", {
+          currentUserId: currentSession?.user.id,
+          expectedUserId: userId,
+        });
+        
+        const { error: sessionCheckError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token || "",
+        });
+        
+        if (sessionCheckError) {
+          await userLogger.error("setSession failed before query", {
+            error: sessionCheckError.message,
+          }, sessionCheckError);
+        } else {
+          await userLogger.info("Session reset successfully before query");
+        }
+      }
+    }
+
+    await userLogger.debug("Saving review session", { cardsReviewed, cardsCorrect });
 
     // Zapisz sesję do review_sessions
     // Kolumna accuracy zostanie obliczona automatycznie przez computed column

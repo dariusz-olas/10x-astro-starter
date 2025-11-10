@@ -152,6 +152,14 @@ npm run test:e2e:debug
 **Testy weryfikujące logowanie:**
 - `tests/e2e/logging-and-auth.spec.ts` - Testuje autoryzację w requestach API i weryfikuje nagłówki Authorization
 - `tests/e2e/logs-verification.spec.ts` - Weryfikuje logi serwerowe po wykonaniu akcji (sprawdza requestId, brak błędów, statusy)
+- `tests/e2e/review-full-flow.spec.ts` - Kompleksowy test pełnego przepływu review (rejestracja → dodaj fiszkę → wszystkie oceny → weryfikacja)
+
+**Automatyczna weryfikacja zmian:**
+Po każdej zmianie w endpointach review (`/api/review/*`), uruchom automatyczną weryfikację:
+```bash
+npm run test:e2e:verify-review
+```
+Ten skrypt uruchamia testy E2E, analizuje logi pod kątem błędów RLS/autoryzacji/sesji i raportuje szczegółowe wyniki. Dzięki temu możesz od razu wiedzieć czy poprawki działają, bez ręcznego sprawdzania.
 
 ## 🔒 Bezpieczeństwo
 

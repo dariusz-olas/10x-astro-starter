@@ -2,7 +2,7 @@
 
 ## Przegląd testów
 
-Projekt zawiera trzy zestawy testów E2E:
+Projekt zawiera cztery zestawy testów E2E:
 
 1. **`user-flow.spec.ts`** - Podstawowy przepływ użytkownika
    - Rejestracja → Logowanie → Dodanie fiszki → Powtórka → Dashboard
@@ -19,6 +19,14 @@ Projekt zawiera trzy zestawy testów E2E:
    - Sprawdzanie czy nie ma błędów ERROR
    - Weryfikacja autoryzacji w logach
 
+4. **`review-full-flow.spec.ts`** - Kompleksowy test pełnego przepływu review
+   - Rejestracja użytkownika
+   - Dodanie fiszki
+   - Przejście przez wszystkie oceny (0-3: Again, Hard, Good, Easy)
+   - Weryfikacja harmonogramu
+   - Weryfikacja zapisu sesji
+   - Weryfikacja autoryzacji we wszystkich requestach
+
 ## Uruchomienie testów
 
 ### Podstawowe komendy
@@ -32,6 +40,12 @@ npm run test:e2e:logging
 
 # Testy z automatyczną weryfikacją logów
 npm run test:e2e:verify
+
+# Kompleksowy test review (pełny przepływ)
+npm run test:e2e:review-full
+
+# Automatyczna weryfikacja zmian w review (testy + analiza logów)
+npm run test:e2e:verify-review
 
 # Testy z interfejsem graficznym
 npm run test:e2e:ui
@@ -51,6 +65,22 @@ npm run test:e2e:verify
 # Lub ręcznie zweryfikuj logi po testach
 node scripts/verify-logs-after-tests.js
 ```
+
+### Automatyczna weryfikacja zmian w review
+
+**Po każdej zmianie w endpointach review (`/api/review/*`), uruchom:**
+
+```bash
+npm run test:e2e:verify-review
+```
+
+Ten skrypt:
+1. Uruchamia kompleksowy test E2E dla pełnego przepływu review
+2. Analizuje logi pod kątem błędów RLS, autoryzacji, sesji, błędów 500
+3. Sprawdza statusy wszystkich requestów
+4. Raportuje szczegółowe wyniki z wskazówkami
+
+**Wynik:** Otrzymujesz kompletny raport czy wszystko działa poprawnie, bez konieczności ręcznego sprawdzania logów czy testowania w przeglądarce.
 
 ## Co testują testy logowania?
 
