@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import AuthWrapper from "../components/AuthWrapper";
 import AIGenerator from "../components/AIGenerator";
+import AppLayout from "../components/AppLayout";
 import { setupClientErrorHandlers } from "../lib/logger-client";
 
 // Initialize global error handlers
@@ -33,7 +34,9 @@ if (typeof window !== "undefined") {
 
         <!-- AI Generator Component -->
         <AuthWrapper client:load>
-          <AIGenerator client:load />
+          <AppLayout client:load>
+            <AIGenerator client:load />
+          </AppLayout>
         </AuthWrapper>
       </div>
     </div>

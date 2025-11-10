@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import AuthWrapper from "../components/AuthWrapper";
 import FlashcardManagerWrapper from "../components/FlashcardManagerWrapper";
+import AppLayout from "../components/AppLayout";
 import { setupClientErrorHandlers } from "../lib/logger-client";
 
 // Initialize global error handlers
@@ -33,7 +34,9 @@ if (typeof window !== "undefined") {
 
         <!-- Flashcard CRUD Component -->
         <AuthWrapper client:load>
-          <FlashcardManagerWrapper client:load />
+          <AppLayout client:load>
+            <FlashcardManagerWrapper client:load />
+          </AppLayout>
         </AuthWrapper>
       </div>
     </div>
