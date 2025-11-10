@@ -55,3 +55,16 @@ export interface ReviewSession {
   cards_correct: number;
   accuracy: number;
 }
+
+// Typy dla systemu wersjonowania
+export interface VersionResponse {
+  version: string;
+  date?: string;
+  build?: string;
+}
+
+export interface VersionInfo {
+  version: string;
+  date: string;
+  number: number;
+}

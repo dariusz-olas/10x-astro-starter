@@ -1,5 +1,9 @@
 # Changelog
 
+## [2025-11-10.2] - 2025-11-10
+### Changed
+- Automatyczna aktualizacja wersji
+
 Wszystkie znaczące zmiany w projekcie będą dokumentowane w tym pliku.
 
 Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/),
