@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { createClientLogger } from "../lib/logger-client";
 import type { TagStat } from "../types";
@@ -9,12 +9,9 @@ export default function TagStats() {
   const [tagStats, setTagStats] = useState<TagStat[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"cards" | "accuracy" | "due">("cards");
+  const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTagStats();
-  }, []);
-
-  const fetchTagStats = async () => {
+  const fetchTagStats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -32,6 +29,7 @@ export default function TagStats() {
       const res = await fetch("/api/dashboard/tag-stats", {
         method: "GET",
         credentials: "include",
+        cache: "no-store", // Wyłącz cache przeglądarki - zawsze pobieraj świeże dane
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -61,7 +59,51 @@ export default function TagStats() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [logger]);
+
+  useEffect(() => {
+    // Pobierz początkową sesję i ustaw userId
+    const fetchInitialSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        setUserId(session.user.id);
+        await fetchTagStats();
+      }
+    };
+
+    fetchInitialSession();
+
+    // Nasłuchuj zmian w sesji użytkownika
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const newUserId = session.user.id;
+        // Jeśli userId się zmienił (np. przelogowanie), odśwież dane
+        setUserId((prevUserId) => {
+          if (prevUserId !== newUserId) {
+            (async () => {
+              await logger.info("User changed, refreshing tag stats", {
+                oldUserId: prevUserId,
+                newUserId: newUserId,
+              });
+              await fetchTagStats(); // Odśwież dane dla nowego użytkownika
+            })();
+            return newUserId;
+          }
+          return prevUserId;
+        });
+      } else {
+        setUserId(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchTagStats, logger]);
 
   // Sortowanie
   const sortedStats = [...tagStats].sort((a, b) => {
@@ -142,10 +184,7 @@ export default function TagStats() {
         {/* Grid kart tagów */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedStats.map((stat) => (
-            <div
-              key={stat.tag}
-              className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow"
-            >
+            <div key={stat.tag} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow">
               {/* Nagłówek karty */}
               <div className="flex items-center justify-between mb-4">
                 <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 rounded-full text-sm font-semibold">
@@ -176,8 +215,8 @@ export default function TagStats() {
                           stat.averageAccuracy >= 80
                             ? "bg-green-500"
                             : stat.averageAccuracy >= 60
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
                         }`}
                         style={{ width: `${stat.averageAccuracy}%` }}
                       />

@@ -3,7 +3,15 @@ import { createServerSupabaseClient } from "../../../db/supabase-server";
 import { formatDatePL, getWeekStart, getMonthStart, getTodayISO } from "../../../lib/dateUtils";
 import { createServerLogger } from "../../../lib/logger-server";
 import { calculateStreak, getMostActiveDay, countActiveDays, roundTo } from "../../../lib/stats-utils";
-import type { DashboardStats, ReviewSession, CardReview, ActivityChartData, AccuracyChartData, CardsDistributionData, TagDistributionData } from "../../../types";
+import type {
+  DashboardStats,
+  ReviewSession,
+  CardReview,
+  ActivityChartData,
+  AccuracyChartData,
+  CardsDistributionData,
+  TagDistributionData,
+} from "../../../types";
 
 export const prerender = false;
 
@@ -33,7 +41,7 @@ function getMostUsedTags(allTags: string[][]): string[] {
 /**
  * Przygotowuje dane dla wykresu aktywności (ostatnie 30 dni)
  */
-function prepareActivityChartData(reviews: Array<{ reviewed_at: string }>): ActivityChartData[] {
+function prepareActivityChartData(reviews: { reviewed_at: string }[]): ActivityChartData[] {
   const today = new Date();
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 30);
@@ -80,7 +88,11 @@ function prepareAccuracyChartData(sessions: ReviewSession[]): AccuracyChartData[
 /**
  * Przygotowuje dane dla wykresu kołowego rozkładu fiszek
  */
-function prepareCardsDistribution(newCards: number, learningCards: number, masteredCards: number): CardsDistributionData[] {
+function prepareCardsDistribution(
+  newCards: number,
+  learningCards: number,
+  masteredCards: number
+): CardsDistributionData[] {
   return [
     { name: "Nowe", value: newCards, fill: "#ef4444" }, // red-500
     { name: "W nauce", value: learningCards, fill: "#f59e0b" }, // amber-500
@@ -131,27 +143,65 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
       } = await supabase.auth.getUser(token);
 
       if (!userError && user) {
-        // Ustaw sesję w Supabase client, aby mógł wykonywać zapytania
+        // WAŻNE: Dla RLS musimy ustawić sesję w Supabase client
+        // Spróbuj najpierw pobrać refresh_token z cookies
+        const refreshTokenCookie = cookies.get("sb-access-token")?.value || cookies.get("sb-refresh-token")?.value;
+
+        // Ustaw sesję w Supabase client - RLS wymaga poprawnej sesji
         const {
           data: { session: tokenSession },
           error: sessionError,
         } = await supabase.auth.setSession({
           access_token: token,
-          refresh_token: "",
+          refresh_token: refreshTokenCookie || token, // Użyj refresh_token z cookies lub fallback do token
         });
 
         if (!sessionError && tokenSession) {
           session = tokenSession;
+          await logger.info("Session set via setSession", {
+            userId: session.user.id,
+            hasAccessToken: !!session.access_token,
+            hasRefreshToken: !!session.refresh_token,
+          });
         } else {
-          // Jeśli setSession nie działa, utwórz obiekt sesji z user
-          session = {
-            user: user,
+          // Jeśli setSession nie działa, spróbuj użyć getUser do weryfikacji
+          // i ustawić sesję przez cookies
+          await logger.warning("setSession failed, trying alternative", {
+            sessionError: sessionError?.message,
+            hasRefreshTokenCookie: !!refreshTokenCookie,
+            userId: user.id,
+          });
+
+          // Spróbuj jeszcze raz z pustym refresh_token (czasami działa)
+          const {
+            data: { session: retrySession },
+            error: retryError,
+          } = await supabase.auth.setSession({
             access_token: token,
             refresh_token: "",
-            expires_in: 3600,
-            expires_at: Math.floor(Date.now() / 1000) + 3600,
-            token_type: "bearer",
-          } as any;
+          });
+
+          if (!retryError && retrySession) {
+            session = retrySession;
+            await logger.info("Session set via retry setSession", {
+              userId: retrySession.user.id,
+            });
+          } else {
+            // Ostatnia próba: użyj getUser i ustaw sesję ręcznie
+            // To może nie działać z RLS, ale spróbujemy
+            await logger.warning("All setSession attempts failed, using manual session", {
+              retryError: retryError?.message,
+              userId: user.id,
+            });
+            session = {
+              user: user,
+              access_token: token,
+              refresh_token: refreshTokenCookie || "",
+              expires_in: 3600,
+              expires_at: Math.floor(Date.now() / 1000) + 3600,
+              token_type: "bearer",
+            } as any;
+          }
         }
       }
     }
@@ -160,12 +210,43 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     if (!session) {
       const {
         data: { session: cookieSession },
+        error: cookieError,
       } = await supabase.auth.getSession();
-      session = cookieSession;
+
+      if (cookieSession) {
+        session = cookieSession;
+        await logger.info("Session retrieved from cookies", {
+          userId: session.user.id,
+          hasAccessToken: !!session.access_token,
+          hasRefreshToken: !!session.refresh_token,
+        });
+
+        // WAŻNE: Upewnij się, że sesja z cookies jest ustawiona w Supabase client dla RLS
+        // RLS wymaga poprawnej sesji w Supabase client
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token || "",
+        });
+
+        if (setSessionError) {
+          await logger.warning("Failed to set session from cookies", {
+            error: setSessionError.message,
+          });
+        } else {
+          await logger.info("Session from cookies set successfully in Supabase client");
+        }
+      } else {
+        await logger.debug("No session in cookies", {
+          cookieError: cookieError?.message,
+        });
+      }
     }
 
     if (!session) {
-      await logger.warning("Unauthorized dashboard stats request");
+      await logger.warning("Unauthorized dashboard stats request", {
+        hasAuthHeader: !!authHeader,
+        hasCookies: cookies.getAll().length > 0,
+      });
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -253,9 +334,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 
     const sessions = (allSessions || []) as ReviewSession[];
     const averageAccuracy =
-      sessions.length > 0
-        ? roundTo(sessions.reduce((sum, s) => sum + Number(s.accuracy), 0) / sessions.length, 1)
-        : 0;
+      sessions.length > 0 ? roundTo(sessions.reduce((sum, s) => sum + Number(s.accuracy), 0) / sessions.length, 1) : 0;
 
     // 6. Najdłuższa seria dni z powtórkami
     const longestStreak = calculateStreak(sessions);
@@ -283,9 +362,12 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     }
 
     const scheduling = schedulingData || [];
-    const averageEase = scheduling.length > 0 ? roundTo(scheduling.reduce((sum, s) => sum + s.ease, 0) / scheduling.length, 0) : 0;
+    const averageEase =
+      scheduling.length > 0 ? roundTo(scheduling.reduce((sum, s) => sum + s.ease, 0) / scheduling.length, 0) : 0;
     const averageInterval =
-      scheduling.length > 0 ? roundTo(scheduling.reduce((sum, s) => sum + s.interval_days, 0) / scheduling.length, 1) : 0;
+      scheduling.length > 0
+        ? roundTo(scheduling.reduce((sum, s) => sum + s.interval_days, 0) / scheduling.length, 1)
+        : 0;
 
     const newCards = scheduling.filter((s) => s.repetitions === 0).length;
     const learningCards = scheduling.filter((s) => s.repetitions > 0 && s.interval_days < 30).length;

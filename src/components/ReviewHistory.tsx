@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { createClientLogger } from "../lib/logger-client";
 import { formatDatePL } from "../lib/dateUtils";
@@ -10,12 +10,9 @@ export default function ReviewHistory() {
   const [history, setHistory] = useState<ReviewHistoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(10);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [limit]);
-
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -33,6 +30,7 @@ export default function ReviewHistory() {
       const res = await fetch(`/api/dashboard/review-history?limit=${limit}`, {
         method: "GET",
         credentials: "include",
+        cache: "no-store", // Wyłącz cache przeglądarki - zawsze pobieraj świeże dane
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -62,7 +60,51 @@ export default function ReviewHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, logger]);
+
+  useEffect(() => {
+    // Pobierz początkową sesję i ustaw userId
+    const fetchInitialSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        setUserId(session.user.id);
+        await fetchHistory();
+      }
+    };
+
+    fetchInitialSession();
+
+    // Nasłuchuj zmian w sesji użytkownika
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const newUserId = session.user.id;
+        // Jeśli userId się zmienił (np. przelogowanie), odśwież dane
+        setUserId((prevUserId) => {
+          if (prevUserId !== newUserId) {
+            (async () => {
+              await logger.info("User changed, refreshing review history", {
+                oldUserId: prevUserId,
+                newUserId: newUserId,
+              });
+              await fetchHistory(); // Odśwież dane dla nowego użytkownika
+            })();
+            return newUserId;
+          }
+          return prevUserId;
+        });
+      } else {
+        setUserId(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchHistory, logger]);
 
   if (loading) {
     return (
@@ -138,23 +180,17 @@ export default function ReviewHistory() {
             <tbody>
               {history.map((item) => (
                 <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-sm text-gray-700">
-                    {formatDatePL(item.completedAt)}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-700 text-center">
-                    {item.cardsReviewed}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-700 text-center">
-                    {item.cardsCorrect}
-                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-700">{formatDatePL(item.completedAt)}</td>
+                  <td className="py-3 px-4 text-sm text-gray-700 text-center">{item.cardsReviewed}</td>
+                  <td className="py-3 px-4 text-sm text-gray-700 text-center">{item.cardsCorrect}</td>
                   <td className="py-3 px-4 text-sm text-center">
                     <span
                       className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                         item.accuracy >= 80
                           ? "bg-green-100 text-green-800"
                           : item.accuracy >= 60
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
                       }`}
                     >
                       {item.accuracy.toFixed(1)}%
@@ -171,16 +207,14 @@ export default function ReviewHistory() {
           {history.map((item) => (
             <div key={item.id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex justify-between items-start mb-3">
-                <div className="text-sm font-medium text-gray-700">
-                  {formatDatePL(item.completedAt)}
-                </div>
+                <div className="text-sm font-medium text-gray-700">{formatDatePL(item.completedAt)}</div>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${
                     item.accuracy >= 80
                       ? "bg-green-100 text-green-800"
                       : item.accuracy >= 60
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-800"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
                   }`}
                 >
                   {item.accuracy.toFixed(1)}%

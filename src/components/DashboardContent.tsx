@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { supabase } from "../lib/supabase";
 import { createClientLogger } from "../lib/logger-client";
 import DashboardNav from "./DashboardNav";
@@ -13,6 +13,7 @@ const TagStats = lazy(() => import("./TagStats"));
 export default function DashboardContent() {
   const [logger] = useState(() => createClientLogger({ component: "DashboardContent" }));
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     // Podstawowe
     totalCards: 0,
@@ -39,11 +40,7 @@ export default function DashboardContent() {
   });
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -63,6 +60,7 @@ export default function DashboardContent() {
       const res = await fetch("/api/dashboard/stats", {
         method: "GET",
         credentials: "include", // Ważne: wysyłaj cookies
+        cache: "no-store", // Wyłącz cache przeglądarki - zawsze pobieraj świeże dane
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -98,7 +96,52 @@ export default function DashboardContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [logger]);
+
+  useEffect(() => {
+    // Pobierz początkową sesję i ustaw userId
+    const fetchInitialSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        setUserId(session.user.id);
+        await fetchStats();
+      }
+    };
+
+    fetchInitialSession();
+
+    // Nasłuchuj zmian w sesji użytkownika
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const newUserId = session.user.id;
+        // Jeśli userId się zmienił (np. przelogowanie), odśwież dane
+        setUserId((prevUserId) => {
+          if (prevUserId !== newUserId) {
+            (async () => {
+              await logger.info("User changed, refreshing stats", {
+                oldUserId: prevUserId,
+                newUserId: newUserId,
+              });
+              await fetchStats(); // Odśwież dane dla nowego użytkownika
+            })();
+            return newUserId;
+          }
+          return prevUserId;
+        });
+      } else {
+        setUserId(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchStats, logger]);
+
 
   if (loading) {
     return (
@@ -359,19 +402,16 @@ export default function DashboardContent() {
       </section>
 
       {/* Wykresy (Faza 2) - Lazy loaded */}
-      {stats.activityChartData &&
-        stats.accuracyChartData &&
-        stats.cardsDistribution &&
-        stats.tagDistribution && (
-          <Suspense fallback={<SkeletonLoader type="chart" />}>
-            <StatsCharts
-              activityData={stats.activityChartData}
-              accuracyData={stats.accuracyChartData}
-              distributionData={stats.cardsDistribution}
-              tagData={stats.tagDistribution}
-            />
-          </Suspense>
-        )}
+      {stats.activityChartData && stats.accuracyChartData && stats.cardsDistribution && stats.tagDistribution && (
+        <Suspense fallback={<SkeletonLoader type="chart" />}>
+          <StatsCharts
+            activityData={stats.activityChartData}
+            accuracyData={stats.accuracyChartData}
+            distributionData={stats.cardsDistribution}
+            tagData={stats.tagDistribution}
+          />
+        </Suspense>
+      )}
 
       {/* Historia powtórek (Faza 2) - Lazy loaded */}
       <Suspense fallback={<SkeletonLoader type="table" />}>

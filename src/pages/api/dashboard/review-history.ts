@@ -18,6 +18,7 @@ export const GET: APIRoute = async ({ request, cookies, locals, url }) => {
     let session = null;
 
     if (authHeader && authHeader.startsWith("Bearer ")) {
+      // Jeśli token jest w nagłówku Authorization, użyj go do weryfikacji
       const token = authHeader.substring(7);
       const {
         data: { user },
@@ -25,38 +26,110 @@ export const GET: APIRoute = async ({ request, cookies, locals, url }) => {
       } = await supabase.auth.getUser(token);
 
       if (!userError && user) {
+        // WAŻNE: Dla RLS musimy ustawić sesję w Supabase client
+        // Spróbuj najpierw pobrać refresh_token z cookies
+        const refreshTokenCookie = cookies.get("sb-access-token")?.value || cookies.get("sb-refresh-token")?.value;
+
+        // Ustaw sesję w Supabase client - RLS wymaga poprawnej sesji
         const {
           data: { session: tokenSession },
           error: sessionError,
         } = await supabase.auth.setSession({
           access_token: token,
-          refresh_token: "",
+          refresh_token: refreshTokenCookie || token, // Użyj refresh_token z cookies lub fallback do token
         });
 
         if (!sessionError && tokenSession) {
           session = tokenSession;
+          await logger.info("Session set via setSession", {
+            userId: session.user.id,
+            hasAccessToken: !!session.access_token,
+            hasRefreshToken: !!session.refresh_token,
+          });
         } else {
-          session = {
-            user: user,
+          // Jeśli setSession nie działa, spróbuj użyć getUser do weryfikacji
+          // i ustawić sesję przez cookies
+          await logger.warning("setSession failed, trying alternative", {
+            sessionError: sessionError?.message,
+            hasRefreshTokenCookie: !!refreshTokenCookie,
+            userId: user.id,
+          });
+
+          // Spróbuj jeszcze raz z pustym refresh_token (czasami działa)
+          const {
+            data: { session: retrySession },
+            error: retryError,
+          } = await supabase.auth.setSession({
             access_token: token,
             refresh_token: "",
-            expires_in: 3600,
-            expires_at: Math.floor(Date.now() / 1000) + 3600,
-            token_type: "bearer",
-          } as any;
+          });
+
+          if (!retryError && retrySession) {
+            session = retrySession;
+            await logger.info("Session set via retry setSession", {
+              userId: retrySession.user.id,
+            });
+          } else {
+            // Ostatnia próba: użyj getUser i ustaw sesję ręcznie
+            // To może nie działać z RLS, ale spróbujemy
+            await logger.warning("All setSession attempts failed, using manual session", {
+              retryError: retryError?.message,
+              userId: user.id,
+            });
+            session = {
+              user: user,
+              access_token: token,
+              refresh_token: refreshTokenCookie || "",
+              expires_in: 3600,
+              expires_at: Math.floor(Date.now() / 1000) + 3600,
+              token_type: "bearer",
+            } as any;
+          }
         }
       }
     }
 
+    // Jeśli nie ma sesji z tokenu, spróbuj odczytać z cookies
     if (!session) {
       const {
         data: { session: cookieSession },
+        error: cookieError,
       } = await supabase.auth.getSession();
-      session = cookieSession;
+
+      if (cookieSession) {
+        session = cookieSession;
+        await logger.info("Session retrieved from cookies", {
+          userId: session.user.id,
+          hasAccessToken: !!session.access_token,
+          hasRefreshToken: !!session.refresh_token,
+        });
+
+        // WAŻNE: Upewnij się, że sesja z cookies jest ustawiona w Supabase client dla RLS
+        // RLS wymaga poprawnej sesji w Supabase client
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token || "",
+        });
+
+        if (setSessionError) {
+          await logger.warning("Failed to set session from cookies", {
+            error: setSessionError.message,
+          });
+        } else {
+          await logger.info("Session from cookies set successfully in Supabase client");
+        }
+      } else {
+        await logger.debug("No session in cookies", {
+          cookieError: cookieError?.message,
+        });
+      }
     }
 
     if (!session) {
-      await logger.warning("Unauthorized review history request");
+      await logger.warning("Unauthorized review history request", {
+        hasAuthHeader: !!authHeader,
+        hasCookies: cookies.getAll().length > 0,
+      });
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
