@@ -1,5 +1,9 @@
 # Changelog
 
+## [2025-11-10.3] - 2025-11-10
+### Changed
+- Automatyczna aktualizacja wersji
+
 ## [2025-11-10.2] - 2025-11-10
 ### Changed
 - Automatyczna aktualizacja wersji

@@ -14,6 +14,8 @@ export default function UserMenu() {
   const [loggingOut, setLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const logoutButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -67,22 +69,58 @@ export default function UserMenu() {
       }
     };
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      // ESC - zamyka menu
+      if (event.key === "Escape") {
+        event.preventDefault();
         setIsOpen(false);
         buttonRef.current?.focus();
+        return;
+      }
+
+      // Tab/Shift+Tab - focus trap (cykliczne przechodzenie przez menu items)
+      if (event.key === "Tab") {
+        const focusableElements = [profileButtonRef.current, logoutButtonRef.current].filter(Boolean) as HTMLElement[];
+
+        if (focusableElements.length === 0) return;
+
+        const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
+
+        if (event.shiftKey) {
+          // Shift+Tab - do tyłu
+          event.preventDefault();
+          const prevIndex = currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1;
+          focusableElements[prevIndex]?.focus();
+        } else {
+          // Tab - do przodu
+          event.preventDefault();
+          const nextIndex = currentIndex >= focusableElements.length - 1 ? 0 : currentIndex + 1;
+          focusableElements[nextIndex]?.focus();
+        }
       }
     };
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEscape);
+      document.addEventListener("keydown", handleKeyboard);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleKeyboard);
     };
+  }, [isOpen]);
+
+  // Focus trap - przenieś focus na pierwszy element po otwarciu menu
+  useEffect(() => {
+    if (isOpen) {
+      // Przenieś focus na pierwszy element menu
+      setTimeout(() => {
+        profileButtonRef.current?.focus();
+      }, 0);
+    }
   }, [isOpen]);
 
   const handleLogout = async () => {
@@ -140,6 +178,7 @@ export default function UserMenu() {
         >
           <div className="py-1">
             <button
+              ref={profileButtonRef}
               onClick={() => {
                 setIsOpen(false);
                 logger.info("Profile clicked (placeholder)");
@@ -151,6 +190,7 @@ export default function UserMenu() {
               Profil
             </button>
             <button
+              ref={logoutButtonRef}
               onClick={handleLogout}
               disabled={loggingOut}
               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition focus:outline-none focus:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"

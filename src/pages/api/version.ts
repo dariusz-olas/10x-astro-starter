@@ -1,14 +1,12 @@
 import type { APIRoute } from "astro";
-import { readFileSync } from "fs";
-import { join } from "path";
 import { createServerLogger } from "../../lib/logger-server";
 import type { VersionResponse } from "../../types";
 
-export const prerender = false;
+// Import wersji w build time (kompatybilne z Cloudflare Edge Runtime)
+// Vite/Astro wspiera import ?raw dla plików tekstowych
+import versionContent from "../../../VERSION?raw";
 
-// Cache dla wersji (unikamy czytania pliku przy każdym requestcie)
-let cachedVersion: { version: string; timestamp: number } | null = null;
-const CACHE_TTL = 60 * 1000; // 60 sekund
+export const prerender = false;
 
 /**
  * Waliduje format wersji (YYYY-MM-DD.N)
@@ -19,22 +17,36 @@ function validateVersionFormat(version: string): boolean {
 }
 
 /**
- * Czyta wersję z pliku VERSION
+ * Pobiera wersję aplikacji
+ * Wersja jest wbudowana w build time przez import statyczny,
+ * dzięki czemu działa w Cloudflare Edge Runtime bez dostępu do file system
  */
-function readVersion(): string {
-  const versionFile = join(process.cwd(), "VERSION");
-  const version = readFileSync(versionFile, "utf-8").trim();
+function getVersion(): string {
+  try {
+    const version = versionContent.trim();
 
-  if (!validateVersionFormat(version)) {
-    throw new Error(`Invalid version format: ${version}. Expected format: YYYY-MM-DD.N`);
+    if (!version) {
+      throw new Error("VERSION file is empty");
+    }
+
+    if (!validateVersionFormat(version)) {
+      throw new Error(`Invalid version format: ${version}. Expected format: YYYY-MM-DD.N`);
+    }
+
+    return version;
+  } catch (error) {
+    // W przypadku błędu, zwróć fallback
+    console.error("Failed to get version:", error);
+    return "unknown";
   }
-
-  return version;
 }
 
 /**
  * GET /api/version
  * Zwraca aktualną wersję aplikacji
+ *
+ * Endpoint używa importu statycznego (build time) zamiast file system,
+ * dzięki czemu działa w Cloudflare Edge Runtime
  */
 export const GET: APIRoute = async ({ locals }) => {
   // Get request ID from context.locals (set by middleware) or create new one
@@ -42,33 +54,12 @@ export const GET: APIRoute = async ({ locals }) => {
   const logger = createServerLogger({ component: "api/version", requestId });
 
   try {
-    logger.debug("Fetching application version");
+    await logger.debug("Fetching application version");
 
-    // Sprawdź cache
-    const now = Date.now();
-    if (cachedVersion && now - cachedVersion.timestamp < CACHE_TTL) {
-      logger.debug("Returning cached version", { version: cachedVersion.version });
+    // Pobierz wersję (wbudowaną w build time)
+    const version = getVersion();
 
-      const response: VersionResponse = {
-        version: cachedVersion.version,
-      };
-
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60", // Cache w przeglądarce przez 60s
-        },
-      });
-    }
-
-    // Czytaj wersję z pliku
-    const version = readVersion();
-
-    // Zaktualizuj cache
-    cachedVersion = { version, timestamp: now };
-
-    logger.info("Version fetched successfully", { version });
+    await logger.info("Version fetched successfully", { version });
 
     const response: VersionResponse = {
       version,
@@ -78,11 +69,12 @@ export const GET: APIRoute = async ({ locals }) => {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=60",
+        // Cache w przeglądarce przez 5 minut (wersja zmienia się rzadko)
+        "Cache-Control": "public, max-age=300, immutable",
       },
     });
   } catch (error) {
-    logger.error("Error fetching version", { error });
+    await logger.error("Error fetching version", { error });
 
     // W przypadku błędu, zwróć fallback
     const response: VersionResponse = {
