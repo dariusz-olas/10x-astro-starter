@@ -1,5 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "../lib/supabase";
+import { createClientLogger } from "../lib/logger-client";
 import DashboardNav from "./DashboardNav";
 import SkeletonLoader from "./SkeletonLoader";
 import type { DashboardStats } from "../types";
@@ -10,6 +11,7 @@ const ReviewHistory = lazy(() => import("./ReviewHistory"));
 const TagStats = lazy(() => import("./TagStats"));
 
 export default function DashboardContent() {
+  const [logger] = useState(() => createClientLogger({ component: "DashboardContent" }));
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     // Podstawowe
@@ -78,9 +80,20 @@ export default function DashboardContent() {
       }
 
       const data = await res.json();
+
+      // Walidacja danych API
+      if (!data || typeof data !== "object") {
+        throw new Error("Invalid response format");
+      }
+
+      // Walidacja wymaganych pól
+      if (typeof data.totalCards !== "number") {
+        throw new Error("Invalid totalCards in response");
+      }
+
       setStats(data);
     } catch (err: any) {
-      console.error("❌ Błąd pobierania statystyk:", err);
+      await logger.error("Failed to fetch dashboard stats", {}, err);
       setError(err.message || "Błąd podczas pobierania statystyk");
     } finally {
       setLoading(false);

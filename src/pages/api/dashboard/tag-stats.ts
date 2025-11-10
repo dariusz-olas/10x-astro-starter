@@ -102,23 +102,48 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
       }
     }
 
-    // 3. Dla każdego tagu pobierz statystyki
+    // 3. Optymalizacja: Pobierz wszystkie dane jednym zapytaniem (zamiast N+1)
+    const allCardIds = Object.values(tagToCardIds).flat();
+
+    // Pobierz wszystkie reviews dla wszystkich fiszek użytkownika
+    const { data: allReviews, error: allReviewsError } = await supabase
+      .from("card_reviews")
+      .select("reviewed_at, grade, card_id")
+      .eq("user_id", userId)
+      .in("card_id", allCardIds);
+
+    if (allReviewsError) {
+      await userLogger.error("Failed to fetch all reviews", {}, allReviewsError);
+      return new Response(JSON.stringify({ error: "Błąd pobierania statystyk tagów" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Pobierz wszystkie cardsDue dla wszystkich fiszek
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const todayISO = today.toISOString();
+
+    const { data: allCardsDue, error: cardsDueError } = await supabase
+      .from("card_scheduling")
+      .select("card_id")
+      .eq("user_id", userId)
+      .in("card_id", allCardIds)
+      .lte("due_at", todayISO);
+
+    if (cardsDueError) {
+      await userLogger.warning("Failed to fetch cards due", {}, cardsDueError);
+    }
+
+    // 4. Przetwórz dane w pamięci dla każdego tagu
     const tagStats: TagStat[] = [];
 
     for (const [tag, cardIds] of Object.entries(tagToCardIds)) {
-      // Pobierz sesje powtórek dla fiszek z tym tagiem
-      const { data: reviews, error: reviewsError } = await supabase
-        .from("card_reviews")
-        .select("reviewed_at, grade, card_id")
-        .eq("user_id", userId)
-        .in("card_id", cardIds);
-
-      if (reviewsError) {
-        await userLogger.warning(`Failed to fetch reviews for tag ${tag}`, {}, reviewsError);
-      }
+      // Filtruj reviews dla tego tagu
+      const tagReviews = (allReviews || []).filter((r) => cardIds.includes(r.card_id));
 
       // Oblicz średnią poprawność (grade >= 2 to poprawna odpowiedź)
-      const tagReviews = reviews || [];
       const correctReviews = tagReviews.filter((r) => r.grade >= 2).length;
       const averageAccuracy = tagReviews.length > 0
         ? Math.round((correctReviews / tagReviews.length) * 100)
@@ -131,28 +156,15 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
             .sort((a, b) => b.getTime() - a.getTime())[0]
         : null;
 
-      // Pobierz fiszki do powtórki dzisiaj dla tego tagu
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
-      const todayISO = today.toISOString();
-
-      const { count: cardsDue, error: cardsDueError } = await supabase
-        .from("card_scheduling")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .in("card_id", cardIds)
-        .lte("due_at", todayISO);
-
-      if (cardsDueError) {
-        await userLogger.warning(`Failed to count cards due for tag ${tag}`, {}, cardsDueError);
-      }
+      // Zlicz fiszki do powtórki dla tego tagu
+      const tagCardsDue = (allCardsDue || []).filter((c) => cardIds.includes(c.card_id));
 
       tagStats.push({
         tag,
         cardCount: cardIds.length,
         averageAccuracy,
         lastReview: lastReviewDate ? formatDatePL(lastReviewDate) : null,
-        cardsDue: cardsDue || 0,
+        cardsDue: tagCardsDue.length,
       });
     }
 

@@ -69,10 +69,14 @@ export const GET: APIRoute = async ({ request, cookies, locals, url }) => {
       userEmail: session.user.email,
     });
 
-    // Pobierz parametry z URL (opcjonalnie: limit, offset)
+    // Pobierz parametry z URL z walidacją
     const searchParams = url.searchParams;
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    const limitRaw = searchParams.get("limit") || "10";
+    const offsetRaw = searchParams.get("offset") || "0";
+
+    // Walidacja: limit musi być 1-100, offset musi być >= 0
+    const limit = Math.max(1, Math.min(100, parseInt(limitRaw, 10) || 10));
+    const offset = Math.max(0, parseInt(offsetRaw, 10) || 0);
 
     await userLogger.debug("Fetching review history", { limit, offset });
 

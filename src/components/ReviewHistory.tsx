@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { createClientLogger } from "../lib/logger-client";
 import { formatDatePL } from "../lib/dateUtils";
 import type { ReviewHistoryItem } from "../types";
 
 export default function ReviewHistory() {
+  const [logger] = useState(() => createClientLogger({ component: "ReviewHistory" }));
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<ReviewHistoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -47,9 +49,15 @@ export default function ReviewHistory() {
       }
 
       const data = await res.json();
+
+      // Walidacja danych API
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid response format - expected array");
+      }
+
       setHistory(data);
     } catch (err: any) {
-      console.error("Błąd pobierania historii:", err);
+      await logger.error("Failed to fetch review history", {}, err);
       setError(err.message || "Błąd podczas pobierania historii");
     } finally {
       setLoading(false);
@@ -106,6 +114,7 @@ export default function ReviewHistory() {
           <select
             value={limit}
             onChange={(e) => setLimit(parseInt(e.target.value))}
+            aria-label="Liczba wyświetlanych sesji"
             className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="5">5 ostatnich</option>

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { createClientLogger } from "../lib/logger-client";
 import type { TagStat } from "../types";
 
 export default function TagStats() {
+  const [logger] = useState(() => createClientLogger({ component: "TagStats" }));
   const [loading, setLoading] = useState(true);
   const [tagStats, setTagStats] = useState<TagStat[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,9 +48,15 @@ export default function TagStats() {
       }
 
       const data = await res.json();
+
+      // Walidacja danych API
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid response format - expected array");
+      }
+
       setTagStats(data);
     } catch (err: any) {
-      console.error("Błąd pobierania statystyk tagów:", err);
+      await logger.error("Failed to fetch tag stats", {}, err);
       setError(err.message || "Błąd podczas pobierania statystyk tagów");
     } finally {
       setLoading(false);
@@ -121,6 +129,7 @@ export default function TagStats() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "cards" | "accuracy" | "due")}
+              aria-label="Sortuj statystyki tagów"
               className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="cards">Liczba fiszek</option>

@@ -8,10 +8,16 @@ import type { ReviewSession } from "../types";
 export function calculateStreak(sessions: ReviewSession[]): number {
   if (!sessions || sessions.length === 0) return 0;
 
-  // Grupuj sesje po datach (bez czasu)
+  // Grupuj sesje po datach (bez czasu) z walidacją
   const uniqueDates = new Set<string>();
   for (const session of sessions) {
     const date = new Date(session.completed_at);
+
+    // Walidacja daty - pomiń nieprawidłowe daty
+    if (isNaN(date.getTime())) {
+      continue;
+    }
+
     const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
     uniqueDates.add(dateStr);
   }
@@ -57,11 +63,17 @@ export function getMostActiveDay(sessions: ReviewSession[]): string | null {
 
   const daysPL = ["Niedziela", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
 
-  // Zlicz sesje dla każdego dnia tygodnia (0 = Niedziela, 6 = Sobota)
+  // Zlicz sesje dla każdego dnia tygodnia (0 = Niedziela, 6 = Sobota) z walidacją
   const dayCounts: Record<number, number> = {};
 
   for (const session of sessions) {
     const date = new Date(session.completed_at);
+
+    // Walidacja daty - pomiń nieprawidłowe daty
+    if (isNaN(date.getTime())) {
+      continue;
+    }
+
     const dayOfWeek = date.getDay(); // 0-6
     dayCounts[dayOfWeek] = (dayCounts[dayOfWeek] || 0) + 1;
   }
