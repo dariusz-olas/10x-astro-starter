@@ -1,0 +1,733 @@
+openapi: 3.0.3
+info:
+  title: 10xCards - Flashcards API
+  description: |
+    API dla aplikacji do nauki fiszek z wykorzystaniem algorytmu powtórek rozłożonych w czasie (SM-2).
+
+    ## Autentykacja
+    API wykorzystuje Supabase Auth. Wszystkie endpointy (poza `/api/version`) wymagają autentykacji.
+    Token autentykacji może być przekazany na dwa sposoby:
+    - **Bearer token w nagłówku Authorization**: `Authorization: Bearer <token>`
+    - **Cookies**: Token przechowywany w cookies po zalogowaniu
+
+    ## Rate Limiting
+    API może być chronione rate limitingiem w zależności od konfiguracji serwera.
+  version: 1.0.0
+  contact:
+    name: API Support
+    url: https://github.com/dariusz-olas/10x-astro-starter
+
+servers:
+  - url: http://localhost:4321/api
+    description: Serwer deweloperski
+  - url: https://your-production-domain.com/api
+    description: Serwer produkcyjny
+
+tags:
+  - name: auth
+    description: Endpointy autentykacji
+  - name: flashcards
+    description: Generowanie i zarządzanie fiszkami
+  - name: review
+    description: System powtórek
+  - name: dashboard
+    description: Statystyki i dashboard użytkownika
+  - name: system
+    description: Endpointy systemowe
+
+paths:
+  /version:
+    get:
+      tags:
+        - system
+      summary: Pobierz wersję aplikacji
+      description: Zwraca aktualną wersję aplikacji. Nie wymaga autentykacji.
+      operationId: getVersion
+      responses:
+        '200':
+          description: Wersja aplikacji
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+              examples:
+                success:
+                  value:
+                    version: "2025-01-15.1"
+        '500':
+          description: Błąd serwera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+              examples:
+                error:
+                  value:
+                    version: "unknown"
+
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: Wyloguj użytkownika
+      description: Wylogowuje użytkownika i czyści cookies sesji
+      operationId: logout
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Wylogowanie pomyślne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Wylogowano pomyślnie"
+        '500':
+          description: Błąd podczas wylogowania
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Błąd podczas wylogowania"
+
+  /generate-flashcards:
+    post:
+      tags:
+        - flashcards
+      summary: Generuj fiszki z tekstu
+      description: Generuje 5-15 fiszek edukacyjnych z podanego tekstu używając AI (OpenRouter API)
+      operationId: generateFlashcards
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Tekst źródłowy do wygenerowania fiszek
+                  minLength: 1
+                  example: "TypeScript to typowany nadzbiór JavaScript, który kompiluje się do czystego JavaScript. Dodaje opcjonalne typy statyczne do języka."
+      responses:
+        '200':
+          description: Fiszki wygenerowane pomyślnie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flashcards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GeneratedFlashcard'
+              examples:
+                success:
+                  value:
+                    flashcards:
+                      - front: "Co to jest TypeScript?"
+                        back: "TypeScript to typowany nadzbiór JavaScript"
+                      - front: "Do czego kompiluje się TypeScript?"
+                        back: "Do czystego JavaScript"
+        '400':
+          description: Nieprawidłowe dane wejściowe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                emptyText:
+                  value:
+                    error: "Tekst nie może być pusty"
+                invalidJson:
+                  value:
+                    error: "Nieprawidłowy format danych JSON"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Błąd generowania fiszek
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /review/next:
+    get:
+      tags:
+        - review
+      summary: Pobierz następne karty do powtórki
+      description: |
+        Zwraca listę kart do powtórki (max 20).
+
+        **Tryb normalny**: Zwraca karty należne (due_at <= teraz) oraz nowe karty bez harmonogramu
+
+        **Tryb force**: Zwraca wszystkie dostępne karty użytkownika (parametr `force=true`)
+      operationId: getNextCards
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: force
+          in: query
+          description: Tryb force - zwróć wszystkie karty (ignoruje harmonogram)
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Lista kart do powtórki
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReviewCard'
+              examples:
+                success:
+                  value:
+                    cards:
+                      - id: "550e8400-e29b-41d4-a716-446655440000"
+                        front: "Co to jest TypeScript?"
+                        back: "Typowany nadzbiór JavaScript"
+                      - id: "660e8400-e29b-41d4-a716-446655440001"
+                        front: "Co to jest React?"
+                        back: "Biblioteka do budowania UI"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Błąd pobierania kart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /review/submit:
+    post:
+      tags:
+        - review
+      summary: Zapisz odpowiedź na kartę
+      description: |
+        Zapisuje odpowiedź użytkownika na kartę i aktualizuje harmonogram powtórek według algorytmu SM-2.
+
+        **Oceny (grade)**:
+        - 0: Again (całkowicie niepoprawna - resetuje postęp)
+        - 1: Hard (trudna - resetuje postęp)
+        - 2: Good (dobra - zwiększa interwał)
+        - 3: Easy (łatwa - znacznie zwiększa interwał i ease factor)
+      operationId: submitReview
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cardId
+                - grade
+              properties:
+                cardId:
+                  type: string
+                  format: uuid
+                  description: ID karty do oceny
+                grade:
+                  type: integer
+                  minimum: 0
+                  maximum: 3
+                  description: Ocena (0=Again, 1=Hard, 2=Good, 3=Easy)
+            examples:
+              goodAnswer:
+                value:
+                  cardId: "550e8400-e29b-41d4-a716-446655440000"
+                  grade: 2
+              easyAnswer:
+                value:
+                  cardId: "550e8400-e29b-41d4-a716-446655440000"
+                  grade: 3
+      responses:
+        '200':
+          description: Odpowiedź zapisana pomyślnie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cardId:
+                    type: string
+                    format: uuid
+                  next:
+                    type: object
+                    properties:
+                      ease:
+                        type: number
+                        description: Nowy ease factor (130-300+)
+                      intervalDays:
+                        type: number
+                        description: Nowy interwał w dniach
+                      repetitions:
+                        type: number
+                        description: Liczba poprawnych powtórek
+                      dueAt:
+                        type: string
+                        format: date-time
+                        description: Data następnej powtórki
+              examples:
+                success:
+                  value:
+                    cardId: "550e8400-e29b-41d4-a716-446655440000"
+                    next:
+                      ease: 260
+                      intervalDays: 7
+                      repetitions: 3
+                      dueAt: "2025-01-22T00:00:00.000Z"
+        '400':
+          description: Nieprawidłowe dane
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidGrade:
+                  value:
+                    error: "Wymagane: { cardId, grade: 0..3 }"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Błąd zapisu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /review/session-complete:
+    post:
+      tags:
+        - review
+      summary: Zakończ sesję powtórek
+      description: Zapisuje podsumowanie sesji powtórek do bazy danych
+      operationId: completeSession
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cardsReviewed
+                - cardsCorrect
+              properties:
+                cardsReviewed:
+                  type: integer
+                  minimum: 0
+                  description: Liczba przejrzanych kart
+                cardsCorrect:
+                  type: integer
+                  minimum: 0
+                  description: Liczba poprawnych odpowiedzi (grade >= 2)
+            examples:
+              session:
+                value:
+                  cardsReviewed: 20
+                  cardsCorrect: 16
+      responses:
+        '200':
+          description: Sesja zapisana pomyślnie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewSession'
+              examples:
+                success:
+                  value:
+                    id: "770e8400-e29b-41d4-a716-446655440002"
+                    completed_at: "2025-01-15T14:30:00.000Z"
+                    cards_reviewed: 20
+                    cards_correct: 16
+                    accuracy: 80
+        '400':
+          description: Nieprawidłowe dane
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidData:
+                  value:
+                    error: "Wymagane: { cardsReviewed: number >= 0, cardsCorrect: number >= 0 && <= cardsReviewed }"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Błąd zapisu sesji
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/stats:
+    get:
+      tags:
+        - dashboard
+      summary: Pobierz statystyki użytkownika
+      description: |
+        Zwraca kompletne statystyki użytkownika:
+        - Podstawowe statystyki (liczba fiszek, ostatnia powtórka, najczęstsze tagi)
+        - Statystyki powtórek (łączna liczba, średnia poprawność, najdłuższa seria)
+        - Statystyki algorytmu SM-2 (ease, interwał, rozkład fiszek)
+        - Statystyki czasowe (aktywność w ostatnich dniach)
+        - Dane dla wykresów (aktywność, poprawność, rozkład fiszek, tagi)
+
+        **Cache**: Endpoint zwraca nagłówki cache (5 min)
+      operationId: getDashboardStats
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Statystyki użytkownika
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "private, max-age=300, stale-while-revalidate=600"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Błąd pobierania statystyk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/tag-stats:
+    get:
+      tags:
+        - dashboard
+      summary: Pobierz statystyki per tag
+      description: |
+        Zwraca szczegółowe statystyki dla każdego tagu:
+        - Liczba fiszek z danym tagiem
+        - Średnia poprawność
+        - Ostatnia powtórka
+        - Liczba fiszek do powtórki dzisiaj
+
+        Tagi są sortowane po liczbie fiszek (malejąco).
+
+        **Cache**: Endpoint zwraca nagłówki cache (5 min)
+      operationId: getTagStats
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Statystyki tagów
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "private, max-age=300"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TagStat'
+              examples:
+                success:
+                  value:
+                    - tag: "JavaScript"
+                      cardCount: 45
+                      averageAccuracy: 85
+                      lastReview: "15 stycznia 2025"
+                      cardsDue: 12
+                    - tag: "TypeScript"
+                      cardCount: 30
+                      averageAccuracy: 78
+                      lastReview: "14 stycznia 2025"
+                      cardsDue: 8
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Błąd pobierania statystyk tagów
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT z Supabase Auth
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sb-access-token
+      description: Token sesji przechowywany w cookies
+
+  responses:
+    UnauthorizedError:
+      description: Nieautoryzowany dostęp - brak lub nieprawidłowy token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unauthorized:
+              value:
+                error: "Unauthorized"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Opis błędu
+        details:
+          type: string
+          description: Szczegóły błędu (tylko w trybie deweloperskim)
+      required:
+        - error
+
+    VersionResponse:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Wersja aplikacji w formacie YYYY-MM-DD.N
+          example: "2025-01-15.1"
+      required:
+        - version
+
+    GeneratedFlashcard:
+      type: object
+      properties:
+        front:
+          type: string
+          description: Przód fiszki (pytanie/pojęcie)
+          example: "Co to jest TypeScript?"
+        back:
+          type: string
+          description: Tył fiszki (odpowiedź/definicja)
+          example: "Typowany nadzbiór JavaScript"
+      required:
+        - front
+        - back
+
+    ReviewCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unikalny identyfikator karty
+        front:
+          type: string
+          description: Przód fiszki
+        back:
+          type: string
+          description: Tył fiszki
+      required:
+        - id
+        - front
+        - back
+
+    ReviewSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        completed_at:
+          type: string
+          format: date-time
+          description: Data zakończenia sesji
+        cards_reviewed:
+          type: integer
+          description: Liczba przejrzanych kart
+        cards_correct:
+          type: integer
+          description: Liczba poprawnych odpowiedzi
+        accuracy:
+          type: number
+          description: Procent poprawności (0-100)
+      required:
+        - id
+        - completed_at
+        - cards_reviewed
+        - cards_correct
+        - accuracy
+
+    DashboardStats:
+      type: object
+      properties:
+        # Podstawowe
+        totalCards:
+          type: integer
+          description: Łączna liczba fiszek użytkownika
+        lastReview:
+          type: string
+          nullable: true
+          description: Data ostatniej powtórki (po polsku)
+          example: "15 stycznia 2025"
+        accuracy:
+          type: integer
+          description: Poprawność ostatniej sesji (0-100)
+        mostUsedTags:
+          type: array
+          items:
+            type: string
+          description: Top 5 najczęściej używanych tagów
+
+        # Statystyki powtórek
+        totalReviews:
+          type: integer
+          description: Łączna liczba powtórek
+        averageAccuracy:
+          type: number
+          description: Średnia poprawność ze wszystkich sesji
+        longestStreak:
+          type: integer
+          description: Najdłuższa seria dni z powtórkami
+        cardsDueToday:
+          type: integer
+          description: Liczba fiszek do powtórki dzisiaj
+
+        # Statystyki algorytmu SM-2
+        averageEase:
+          type: number
+          description: Średni ease factor
+        averageInterval:
+          type: number
+          description: Średni interwał powtórek (dni)
+        newCards:
+          type: integer
+          description: Liczba nowych fiszek (repetitions = 0)
+        learningCards:
+          type: integer
+          description: Liczba fiszek w nauce (repetitions > 0, interval < 30)
+        masteredCards:
+          type: integer
+          description: Liczba opanowanych fiszek (interval >= 30)
+
+        # Statystyki czasowe
+        cardsAddedThisWeek:
+          type: integer
+          description: Fiszki dodane w tym tygodniu
+        cardsAddedThisMonth:
+          type: integer
+          description: Fiszki dodane w tym miesiącu
+        activeDaysLast7Days:
+          type: integer
+          description: Dni z aktywnością w ostatnich 7 dniach
+        activeDaysLast30Days:
+          type: integer
+          description: Dni z aktywnością w ostatnich 30 dniach
+        mostActiveDayOfWeek:
+          type: string
+          nullable: true
+          description: Najaktywniejszy dzień tygodnia
+          example: "Środa"
+
+        # Dane dla wykresów
+        activityChartData:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              reviews:
+                type: integer
+        accuracyChartData:
+          type: array
+          items:
+            type: object
+            properties:
+              session:
+                type: string
+              accuracy:
+                type: number
+              date:
+                type: string
+        cardsDistribution:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: integer
+              fill:
+                type: string
+        tagDistribution:
+          type: array
+          items:
+            type: object
+            properties:
+              tag:
+                type: string
+              count:
+                type: integer
+
+    TagStat:
+      type: object
+      properties:
+        tag:
+          type: string
+          description: Nazwa tagu
+        cardCount:
+          type: integer
+          description: Liczba fiszek z tym tagiem
+        averageAccuracy:
+          type: integer
+          description: Średnia poprawność (0-100)
+        lastReview:
+          type: string
+          nullable: true
+          description: Data ostatniej powtórki (po polsku)
+          example: "15 stycznia 2025"
+        cardsDue:
+          type: integer
+          description: Liczba fiszek do powtórki dzisiaj
+      required:
+        - tag
+        - cardCount
+        - averageAccuracy
+        - lastReview
+        - cardsDue
