@@ -17,12 +17,7 @@ export class ServerLogger {
   private userEmail?: string;
   private component?: string;
 
-  constructor(options?: {
-    requestId?: string;
-    userId?: string;
-    userEmail?: string;
-    component?: string;
-  }) {
+  constructor(options?: { requestId?: string; userId?: string; userEmail?: string; component?: string }) {
     this.requestId = options?.requestId || generateRequestId();
     this.userId = options?.userId;
     this.userEmail = options?.userEmail;
@@ -32,11 +27,7 @@ export class ServerLogger {
   /**
    * Create a new logger instance with updated context
    */
-  withContext(context: {
-    component?: string;
-    userId?: string;
-    userEmail?: string;
-  }): ServerLogger {
+  withContext(context: { component?: string; userId?: string; userEmail?: string }): ServerLogger {
     return new ServerLogger({
       requestId: this.requestId,
       userId: context.userId || this.userId,
@@ -48,10 +39,7 @@ export class ServerLogger {
   /**
    * Extract user context from Supabase session
    */
-  static async fromRequest(
-    cookies: AstroCookies,
-    component?: string
-  ): Promise<ServerLogger> {
+  static async fromRequest(cookies: AstroCookies, component?: string): Promise<ServerLogger> {
     // Try to get user from cookies/session
     // This is a placeholder - actual implementation depends on your auth setup
     let userId: string | undefined;
@@ -77,10 +65,7 @@ export class ServerLogger {
   /**
    * Log DEBUG message
    */
-  async debug(
-    message: string,
-    context?: Record<string, unknown>
-  ): Promise<void> {
+  async debug(message: string, context?: Record<string, unknown>): Promise<void> {
     await logger.debug(message, {
       component: this.component,
       requestId: this.requestId,
@@ -93,10 +78,7 @@ export class ServerLogger {
   /**
    * Log INFO message
    */
-  async info(
-    message: string,
-    context?: Record<string, unknown>
-  ): Promise<void> {
+  async info(message: string, context?: Record<string, unknown>): Promise<void> {
     await logger.info(message, {
       component: this.component,
       requestId: this.requestId,
@@ -109,11 +91,7 @@ export class ServerLogger {
   /**
    * Log WARNING message
    */
-  async warning(
-    message: string,
-    context?: Record<string, unknown>,
-    error?: unknown
-  ): Promise<void> {
+  async warning(message: string, context?: Record<string, unknown>, error?: unknown): Promise<void> {
     await logger.warning(message, {
       component: this.component,
       requestId: this.requestId,
@@ -127,11 +105,7 @@ export class ServerLogger {
   /**
    * Log ERROR message
    */
-  async error(
-    message: string,
-    context?: Record<string, unknown>,
-    error?: unknown
-  ): Promise<void> {
+  async error(message: string, context?: Record<string, unknown>, error?: unknown): Promise<void> {
     await logger.error(message, {
       component: this.component,
       requestId: this.requestId,
@@ -145,11 +119,7 @@ export class ServerLogger {
   /**
    * Log CRITICAL message
    */
-  async critical(
-    message: string,
-    context?: Record<string, unknown>,
-    error?: unknown
-  ): Promise<void> {
+  async critical(message: string, context?: Record<string, unknown>, error?: unknown): Promise<void> {
     await logger.critical(message, {
       component: this.component,
       requestId: this.requestId,
@@ -163,11 +133,7 @@ export class ServerLogger {
   /**
    * Log API request start
    */
-  async logRequestStart(
-    method: string,
-    url: string,
-    headers?: Record<string, string>
-  ): Promise<void> {
+  async logRequestStart(method: string, url: string, headers?: Record<string, string>): Promise<void> {
     await this.info("API request started", {
       method,
       url,
@@ -178,12 +144,7 @@ export class ServerLogger {
   /**
    * Log API request end
    */
-  async logRequestEnd(
-    method: string,
-    url: string,
-    statusCode: number,
-    durationMs: number
-  ): Promise<void> {
+  async logRequestEnd(method: string, url: string, statusCode: number, durationMs: number): Promise<void> {
     await this.info("API request completed", {
       method,
       url,
@@ -199,11 +160,7 @@ export class ServerLogger {
     const sanitized: Record<string, string> = {};
     for (const [key, value] of Object.entries(headers)) {
       const lowerKey = key.toLowerCase();
-      if (
-        lowerKey === "authorization" ||
-        lowerKey === "cookie" ||
-        lowerKey.includes("token")
-      ) {
+      if (lowerKey === "authorization" || lowerKey === "cookie" || lowerKey.includes("token")) {
         sanitized[key] = "***masked***";
       } else {
         sanitized[key] = value;
@@ -229,4 +186,3 @@ export function createServerLogger(options?: {
  * Default export for convenience
  */
 export const serverLogger = createServerLogger();
-

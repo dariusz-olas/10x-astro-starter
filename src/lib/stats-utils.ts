@@ -97,7 +97,7 @@ export function getMostActiveDay(sessions: ReviewSession[]): string | null {
  * @param reviews - Lista powtórek z datami
  * @returns Obiekt {data: liczba_powtórek}
  */
-export function groupByDate(reviews: Array<{ reviewed_at: string }>): Record<string, number> {
+export function groupByDate(reviews: { reviewed_at: string }[]): Record<string, number> {
   const grouped: Record<string, number> = {};
 
   for (const review of reviews) {
@@ -151,7 +151,7 @@ export function safeAverage(values: number[]): number {
  * @param decimals - Liczba miejsc dziesiętnych (domyślnie 2)
  * @returns Zaokrąglona wartość
  */
-export function roundTo(value: number, decimals: number = 2): number {
+export function roundTo(value: number, decimals = 2): number {
   const multiplier = Math.pow(10, decimals);
   return Math.round(value * multiplier) / multiplier;
 }

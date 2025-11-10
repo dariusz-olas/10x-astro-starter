@@ -82,9 +82,13 @@ export default function AIGenerator() {
       // Automatycznie zaznacz wszystkie
       setSelectedCards(new Set(generatedCards.map((_: any, idx: number) => idx)));
     } catch (err: any) {
-      await logger.error("Flashcard generation failed", {
-        textLength: text.length,
-      }, err);
+      await logger.error(
+        "Flashcard generation failed",
+        {
+          textLength: text.length,
+        },
+        err
+      );
       setError(err.message || "Błąd podczas generowania fiszek");
     } finally {
       setGenerating(false);
@@ -142,9 +146,13 @@ export default function AIGenerator() {
       );
 
       if (insertError) {
-        await logger.error("Failed to save flashcards", {
-          count: cardsToSave.length,
-        }, insertError);
+        await logger.error(
+          "Failed to save flashcards",
+          {
+            count: cardsToSave.length,
+          },
+          insertError
+        );
         throw insertError;
       }
 

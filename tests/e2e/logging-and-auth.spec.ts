@@ -15,13 +15,13 @@ test.describe("Weryfikacja logowania i autoryzacji", () => {
 
   test("Test autoryzacji i logowania - pełny przepływ", async ({ page }) => {
     // Monitoruj requesty sieciowe
-    const apiRequests: Array<{
+    const apiRequests: {
       url: string;
       method: string;
       status: number;
       hasAuth: boolean;
       requestId?: string;
-    }> = [];
+    }[] = [];
 
     // Przechwytuj wszystkie requesty API
     page.on("response", async (response) => {
@@ -192,4 +192,3 @@ test.describe("Weryfikacja logowania i autoryzacji", () => {
     });
   });
 });
-

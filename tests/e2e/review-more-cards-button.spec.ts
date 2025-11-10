@@ -14,14 +14,14 @@ test.describe("Test przycisku 'Przejrzyj więcej kart'", () => {
 
   test("Pełny test przycisku 'Przejrzyj więcej kart'", async ({ page }) => {
     // Monitoruj wszystkie requesty sieciowe
-    const networkRequests: Array<{
+    const networkRequests: {
       url: string;
       method: string;
       status: number;
       headers: Record<string, string>;
       responseBody?: any;
       error?: string;
-    }> = [];
+    }[] = [];
 
     // Przechwytuj requesty i odpowiedzi
     page.on("request", (request) => {
@@ -199,9 +199,7 @@ test.describe("Test przycisku 'Przejrzyj więcej kart'", () => {
       expect(reviewRequests.length).toBeGreaterThan(0);
 
       // Wszystkie requesty powinny mieć autoryzację
-      const unauthorizedRequests = reviewRequests.filter(
-        (r) => !r.headers.authorization && !r.headers.Authorization
-      );
+      const unauthorizedRequests = reviewRequests.filter((r) => !r.headers.authorization && !r.headers.Authorization);
       expect(unauthorizedRequests.length).toBe(0);
 
       // Wszystkie requesty powinny mieć status 200
@@ -213,4 +211,3 @@ test.describe("Test przycisku 'Przejrzyj więcej kart'", () => {
     });
   });
 });
-

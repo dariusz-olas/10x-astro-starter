@@ -120,9 +120,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    await logger.error("Flashcard generation failed", {
-      errorMessage: error.message,
-    }, error);
+    await logger.error(
+      "Flashcard generation failed",
+      {
+        errorMessage: error.message,
+      },
+      error
+    );
     return new Response(
       JSON.stringify({
         error: error.message || "Błąd generowania fiszek",

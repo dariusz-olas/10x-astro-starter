@@ -12,4 +12,3 @@ export enum LogLevel {
   ERROR = "ERROR",
   CRITICAL = "CRITICAL",
 }
-

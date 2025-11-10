@@ -10,10 +10,7 @@ interface GeneratedFlashcardsResponse {
   flashcards: GeneratedFlashcard[];
 }
 
-export async function generateFlashcards(
-  text: string,
-  logger?: ServerLogger
-): Promise<GeneratedFlashcard[]> {
+export async function generateFlashcards(text: string, logger?: ServerLogger): Promise<GeneratedFlashcard[]> {
   // Create logger if not provided
   const log = logger || createServerLogger({ component: "lib/openrouter" });
   // 🔒 SECURITY: OPENROUTER_API_KEY jest PRYWATNYM kluczem - NIGDY nie commituj go do Git!
@@ -97,15 +94,17 @@ ${text}`;
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const error = new Error(
-        errorData.error?.message || `API Error: ${response.status} ${response.statusText}`
+      const error = new Error(errorData.error?.message || `API Error: ${response.status} ${response.statusText}`);
+      await log.error(
+        "OpenRouter API request failed",
+        {
+          status: response.status,
+          statusText: response.statusText,
+          durationMs,
+          errorData,
+        },
+        error
       );
-      await log.error("OpenRouter API request failed", {
-        status: response.status,
-        statusText: response.statusText,
-        durationMs,
-        errorData,
-      }, error);
       throw error;
     }
 
@@ -114,20 +113,28 @@ ${text}`;
     if (data.error) {
       const error = new Error(data.error.message);
       durationMs = Date.now() - startTime;
-      await log.error("OpenRouter API returned error", {
-        durationMs,
-        errorData: data.error,
-      }, error);
+      await log.error(
+        "OpenRouter API returned error",
+        {
+          durationMs,
+          errorData: data.error,
+        },
+        error
+      );
       throw error;
     }
 
     if (!data.choices || data.choices.length === 0) {
       durationMs = Date.now() - startTime;
       const error = new Error("Brak odpowiedzi z API");
-      await log.error("OpenRouter API returned no choices", {
-        durationMs,
-        responseData: data,
-      }, error);
+      await log.error(
+        "OpenRouter API returned no choices",
+        {
+          durationMs,
+          responseData: data,
+        },
+        error
+      );
       throw error;
     }
 
@@ -136,10 +143,14 @@ ${text}`;
     if (!content) {
       durationMs = Date.now() - startTime;
       const error = new Error("Pusta odpowiedź z API");
-      await log.error("OpenRouter API returned empty content", {
-        durationMs,
-        choicesLength: data.choices.length,
-      }, error);
+      await log.error(
+        "OpenRouter API returned empty content",
+        {
+          durationMs,
+          choicesLength: data.choices.length,
+        },
+        error
+      );
       throw error;
     }
 
@@ -178,11 +189,15 @@ ${text}`;
 
     if (!parsed.flashcards || !Array.isArray(parsed.flashcards)) {
       const error = new Error("Nieprawidłowy format odpowiedzi z AI");
-      await log.error("Invalid flashcard format in AI response", {
-        parsedKeys: Object.keys(parsed),
-        hasFlashcards: !!parsed.flashcards,
-        isArray: Array.isArray(parsed.flashcards),
-      }, error);
+      await log.error(
+        "Invalid flashcard format in AI response",
+        {
+          parsedKeys: Object.keys(parsed),
+          hasFlashcards: !!parsed.flashcards,
+          isArray: Array.isArray(parsed.flashcards),
+        },
+        error
+      );
       throw error;
     }
 
@@ -199,10 +214,14 @@ ${text}`;
     durationMs = Date.now() - startTime;
     if (error instanceof SyntaxError) {
       const parseError = new Error("Błąd parsowania odpowiedzi z AI. Spróbuj ponownie.");
-      await log.error("JSON parsing error in AI response", {
-        durationMs,
-        originalError: error.message,
-      }, parseError);
+      await log.error(
+        "JSON parsing error in AI response",
+        {
+          durationMs,
+          originalError: error.message,
+        },
+        parseError
+      );
       throw parseError;
     }
     // Error already logged above, just re-throw

@@ -42,12 +42,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     const durationMs = Date.now() - startTime;
 
     // Log request end
-    await logger.logRequestEnd(
-      request.method,
-      url.pathname + url.search,
-      response.status,
-      durationMs
-    );
+    await logger.logRequestEnd(request.method, url.pathname + url.search, response.status, durationMs);
 
     // Add request ID to response headers for debugging
     response.headers.set("X-Request-ID", requestId);
@@ -72,4 +67,3 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     throw error;
   }
 };
-

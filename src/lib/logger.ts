@@ -1,11 +1,6 @@
 import { promises as fs } from "fs";
 import { join } from "path";
-import {
-  sanitizeData,
-  formatError,
-  getCurrentDateString,
-  getLogFilePath,
-} from "./logger-utils";
+import { sanitizeData, formatError, getCurrentDateString, getLogFilePath } from "./logger-utils";
 import { LogLevel } from "./logger-types";
 
 /**
@@ -52,7 +47,7 @@ class Logger {
   constructor(config?: Partial<LoggerConfig>) {
     // Check if logging is enabled via environment variable
     const logEnabled = import.meta.env.LOG_ENABLED !== "false"; // Default: enabled
-    
+
     // Determine minimum log level from environment or use defaults
     const envLogLevel = import.meta.env.LOG_LEVEL?.toUpperCase();
     let defaultMinLevel: LogLevel;
@@ -71,12 +66,12 @@ class Logger {
       version: "0.0.1",
       ...config,
     };
-    
+
     // Disable file logging if LOG_ENABLED=false
     if (!logEnabled) {
       this.config.minLevel = LogLevel.CRITICAL; // Only log critical errors
     }
-    
+
     this.currentDate = getCurrentDateString();
   }
 
@@ -160,13 +155,7 @@ class Logger {
    * Check if log level should be logged
    */
   private shouldLog(level: LogLevel): boolean {
-    const levels = [
-      LogLevel.DEBUG,
-      LogLevel.INFO,
-      LogLevel.WARNING,
-      LogLevel.ERROR,
-      LogLevel.CRITICAL,
-    ];
+    const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.ERROR, LogLevel.CRITICAL];
     const minLevelIndex = levels.indexOf(this.config.minLevel);
     const logLevelIndex = levels.indexOf(level);
     return logLevelIndex >= minLevelIndex;
@@ -199,9 +188,7 @@ class Logger {
     // Sanitize sensitive data
     const sanitizedEntry: LogEntry = {
       ...entry,
-      context: entry.context
-        ? (sanitizeData(entry.context) as Record<string, unknown>)
-        : undefined,
+      context: entry.context ? (sanitizeData(entry.context) as Record<string, unknown>) : undefined,
       metadata: {
         ...entry.metadata,
         environment: this.config.environment,
@@ -401,4 +388,3 @@ class Logger {
 
 // Export singleton instance
 export const logger = new Logger();
-

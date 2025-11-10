@@ -111,9 +111,7 @@ function analyzeLogs() {
 
   console.log("\n🔗 Spójność requestId:");
   console.log(`   - Unikalne requestId: ${Object.keys(requestGroups).length}`);
-  const incompleteRequests = Object.keys(requestGroups).filter(
-    (id) => requestGroups[id].length < 2
-  );
+  const incompleteRequests = Object.keys(requestGroups).filter((id) => requestGroups[id].length < 2);
   if (incompleteRequests.length > 0) {
     console.log(`   ⚠️  Requesty bez logów start/end: ${incompleteRequests.length}`);
   } else {
@@ -122,8 +120,7 @@ function analyzeLogs() {
 
   // 6. Podsumowanie
   console.log("\n" + "=".repeat(50));
-  const hasIssues =
-    reviewWithoutAuth.length > 0 || failedLogs.length > 0 || errorLogs.length > 0;
+  const hasIssues = reviewWithoutAuth.length > 0 || failedLogs.length > 0 || errorLogs.length > 0;
   if (hasIssues) {
     console.log("❌ Znaleziono problemy w logach!");
     process.exit(1);
@@ -134,4 +131,3 @@ function analyzeLogs() {
 }
 
 analyzeLogs();
-

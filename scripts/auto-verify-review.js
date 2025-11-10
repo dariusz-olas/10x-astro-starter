@@ -2,13 +2,13 @@
 
 /**
  * Automatyczna weryfikacja zmian w systemie review
- * 
+ *
  * Ten skrypt jest uruchamiany automatycznie po każdej zmianie w endpointach review
  * Uruchamia testy E2E i analizuje logi, aby zweryfikować czy wszystko działa poprawnie
- * 
+ *
  * Użycie:
  *   node scripts/auto-verify-review.js
- * 
+ *
  * Lub jako część workflow:
  *   npm run test:e2e:verify-review
  */
@@ -33,7 +33,7 @@ function checkPlaywrightBrowsers() {
     // W Linux/WSL: ~/.cache/ms-playwright/chromium-*/chrome-linux/chrome
     // W Windows: %USERPROFILE%\AppData\Local\ms-playwright\chromium-*\chrome-win\chrome.exe
     const homeDir = homedir();
-    
+
     // Sprawdź katalog z przeglądarkami Playwright
     const playwrightDir = join(homeDir, ".cache", "ms-playwright");
     if (existsSync(playwrightDir)) {
@@ -46,7 +46,7 @@ function checkPlaywrightBrowsers() {
         return false;
       }
     }
-    
+
     // Sprawdź również lokalizację Windows
     const playwrightDirWin = join(homeDir, "AppData", "Local", "ms-playwright");
     if (existsSync(playwrightDirWin)) {
@@ -58,7 +58,7 @@ function checkPlaywrightBrowsers() {
         return false;
       }
     }
-    
+
     return false;
   } catch (error) {
     return false;
@@ -152,7 +152,7 @@ function analyzeLogs(logFilePath) {
     for (const line of lines) {
       try {
         const entry = JSON.parse(line);
-        
+
         // Filtruj tylko wpisy związane z review
         if (
           entry.component?.includes("review") ||
@@ -228,9 +228,7 @@ function checkSessionErrors(errors) {
  */
 function checkRequestStatuses(info) {
   const requests = info.filter((i) => i.message?.includes("API request completed"));
-  const failedRequests = requests.filter(
-    (r) => r.context?.statusCode && r.context.statusCode >= 400
-  );
+  const failedRequests = requests.filter((r) => r.context?.statusCode && r.context.statusCode >= 400);
 
   return { total: requests.length, failed: failedRequests.length, failedRequests };
 }
@@ -255,7 +253,7 @@ function check500Errors(errors) {
  */
 function main() {
   console.log("🚀 Automatyczna weryfikacja zmian w systemie review\n");
-  console.log("=" .repeat(60));
+  console.log("=".repeat(60));
   console.log();
 
   // 0. Sprawdź czy przeglądarki Playwright są zainstalowane (opcjonalnie)
@@ -275,10 +273,10 @@ function main() {
   let testOutput = "";
   try {
     // Uruchom testy i przechwyć output
-    testOutput = execSync(TEST_COMMAND, { 
+    testOutput = execSync(TEST_COMMAND, {
       encoding: "utf-8",
       stdio: ["inherit", "pipe", "pipe"],
-      cwd: process.cwd() 
+      cwd: process.cwd(),
     });
     console.log(testOutput);
     console.log("\n✅ Testy E2E zakończone pomyślnie\n");
@@ -289,51 +287,49 @@ function main() {
     const stderr = error.stderr?.toString() || "";
     const errorMessage = error.message || "";
     testOutput = stdout + stderr + errorMessage;
-    
+
     // Wyświetl output
     if (stdout) console.log(stdout);
     if (stderr) console.error(stderr);
-    
+
     // Sprawdź czy błąd dotyczy brakujących przeglądarek
     const errorOutput = testOutput.toLowerCase();
-    const isBrowserMissing = (
+    const isBrowserMissing =
       errorOutput.includes("executable doesn't exist") ||
       errorOutput.includes("playwright install") ||
       errorOutput.includes("chromium_headless_shell") ||
       errorOutput.includes("chrome-linux") ||
       errorOutput.includes("headless_shell") ||
-      errorOutput.includes("please run the following command")
-    );
-    
+      errorOutput.includes("please run the following command");
+
     // Sprawdź czy błąd dotyczy brakujących zależności systemowych
-    const isDepsMissing = (
+    const isDepsMissing =
       errorOutput.includes("host system is missing dependencies") ||
       errorOutput.includes("install-deps") ||
       errorOutput.includes("libnspr4") ||
       errorOutput.includes("libnss3") ||
-      errorOutput.includes("libasound2")
-    );
-    
+      errorOutput.includes("libasound2");
+
     if (isBrowserMissing || isDepsMissing) {
       if (isDepsMissing) {
         console.error("\n⚠️  Brakują zależności systemowe dla Playwright");
         console.log("📦 Próbuję zainstalować zależności...\n");
         installPlaywrightDeps();
       }
-      
+
       if (isBrowserMissing) {
         console.error("\n⚠️  Przeglądarki Playwright nie są zainstalowane");
         console.log("📦 Próbuję zainstalować przeglądarki...\n");
         installPlaywrightBrowsers();
       }
-      
+
       // Spróbuj ponownie uruchomić testy
       console.log("📋 Ponowne uruchamianie testów E2E...");
       try {
-        testOutput = execSync(TEST_COMMAND, { 
+        testOutput = execSync(TEST_COMMAND, {
           encoding: "utf-8",
           stdio: ["inherit", "pipe", "pipe"],
-          cwd: process.cwd() 
+          cwd: process.cwd(),
         });
         console.log(testOutput);
         console.log("\n✅ Testy E2E zakończone pomyślnie\n");
@@ -343,9 +339,12 @@ function main() {
         const retryStderr = retryError.stderr?.toString() || "";
         if (retryStdout) console.log(retryStdout);
         if (retryStderr) console.error(retryStderr);
-        
+
         const retryErrorOutput = (retryStdout + retryStderr).toLowerCase();
-        if (retryErrorOutput.includes("host system is missing dependencies") || retryErrorOutput.includes("install-deps")) {
+        if (
+          retryErrorOutput.includes("host system is missing dependencies") ||
+          retryErrorOutput.includes("install-deps")
+        ) {
           console.error("\n❌ Testy E2E zakończone z błędami - wymagane zależności systemowe");
           console.error("   Uruchom ręcznie: sudo npx playwright install-deps chromium");
           console.error("   Lub: sudo apt-get install libnspr4 libnss3 libasound2t64");
@@ -464,16 +463,16 @@ function main() {
   console.log();
 
   // 8. Podsumowanie
-  console.log("=" .repeat(60));
+  console.log("=".repeat(60));
   console.log("📋 PODSUMOWANIE:");
-  console.log("=" .repeat(60));
-  
+  console.log("=".repeat(60));
+
   const hasErrors = rlsErrors.length > 0 || authErrors.length > 0 || serverErrors.length > 0 || failed > 0;
-  
+
   if (!testPassed) {
     console.error("❌ Testy E2E nie przeszły");
   }
-  
+
   if (hasErrors) {
     console.error("❌ Weryfikacja zakończona z błędami:");
     console.error(`   - Błędy RLS: ${rlsErrors.length}`);
@@ -507,4 +506,3 @@ function main() {
 }
 
 main();
-

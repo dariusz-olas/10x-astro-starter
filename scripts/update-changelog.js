@@ -102,9 +102,7 @@ i ten projekt adheres to [Semantic Versioning](https://semver.org/lang/pl/).
       if (headerEnd !== -1) {
         // Wstaw nowy wpis po nagłówku
         changelogContent =
-          changelogContent.substring(0, headerEnd + 2) +
-          newEntry +
-          changelogContent.substring(headerEnd + 2);
+          changelogContent.substring(0, headerEnd + 2) + newEntry + changelogContent.substring(headerEnd + 2);
       } else {
         // Jeśli nie znaleziono podwójnego newline, dodaj na końcu pliku
         changelogContent = changelogContent + "\n\n" + newEntry;

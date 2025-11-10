@@ -56,11 +56,55 @@ const reactConfig = tseslint.config({
   },
 });
 
+const scriptsConfig = tseslint.config({
+  files: ["scripts/**/*.js"],
+  rules: {
+    "no-console": "off", // Console.log jest OK w skryptach CLI
+    "no-undef": "off", // process, require są dostępne w Node.js
+    "@typescript-eslint/no-require-imports": "off", // require() jest OK w skryptach
+    "@typescript-eslint/no-unused-vars": "warn", // Tylko warning dla unused vars
+  },
+  languageOptions: {
+    globals: {
+      console: "readonly",
+      process: "readonly",
+      require: "readonly",
+      module: "readonly",
+      __dirname: "readonly",
+      __filename: "readonly",
+    },
+  },
+});
+
+const configFilesConfig = tseslint.config({
+  files: ["*.config.{js,ts,mjs}", "astro.config.mjs"],
+  rules: {
+    "no-undef": "off", // process jest dostępny w config files
+  },
+  languageOptions: {
+    globals: {
+      process: "readonly",
+      __dirname: "readonly",
+      __filename: "readonly",
+    },
+  },
+});
+
+const testsConfig = tseslint.config({
+  files: ["tests/**/*.{js,ts,spec.ts,spec.js}"],
+  rules: {
+    "no-console": "off", // Console.log jest OK w testach
+  },
+});
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   baseConfig,
   jsxA11yConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],
-  eslintPluginPrettier
+  eslintPluginPrettier,
+  scriptsConfig,
+  configFilesConfig,
+  testsConfig
 );
