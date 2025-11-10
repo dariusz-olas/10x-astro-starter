@@ -10,7 +10,8 @@ export default defineConfig({
     ],
     reporters: "default",
     testTimeout: 10000, // Zwiększ timeout dla testów integracyjnych
-    // Global setup dla testów integracyjnych - uruchamia serwer automatycznie
-    globalSetup: ["./tests/integration/globalSetup.ts"],
+    // Global setup tylko dla testów integracyjnych
+    // Dla testów jednostkowych (src/**/*.test.ts) nie jest potrzebny
+    globalSetup: process.env.VITEST_INTEGRATION === "true" ? ["./tests/integration/globalSetup.ts"] : undefined,
   },
 });

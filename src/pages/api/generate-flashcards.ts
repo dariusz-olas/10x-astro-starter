@@ -2,6 +2,8 @@ import type { APIRoute } from "astro";
 import { generateFlashcards } from "../../lib/openrouter";
 import { createServerSupabaseClient } from "../../db/supabase-server";
 import { createServerLogger } from "../../lib/logger-server";
+import { validateAndSanitizeInput, detectPromptInjection, calculateSecurityScore } from "../../lib/security/prompt-injection";
+import { checkAllRateLimits } from "../../lib/security/rate-limit";
 
 export const prerender = false;
 
@@ -140,21 +142,83 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       });
     }
 
-    await userLogger.info("Flashcard generation request received", {
-      textLength: requestData?.text?.length || 0,
-    });
-
     const { text } = requestData || {};
 
-    if (!text || text.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "Tekst nie może być pusty" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
+    // 🔒 SECURITY: Walidacja i sanityzacja inputu
+    const validationResult = validateAndSanitizeInput(text || "");
+
+    if (!validationResult.isValid) {
+      await userLogger.warning("Invalid input rejected", {
+        errors: validationResult.errors,
+        warnings: validationResult.warnings,
+        textLength: text?.length || 0,
       });
+      return new Response(
+        JSON.stringify({
+          error: "Nieprawidłowy tekst",
+          details: validationResult.errors,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
+    // 🔒 SECURITY: Sprawdź czy nie wykryto prompt injection
+    if (detectPromptInjection(text)) {
+      await userLogger.warning("Potential prompt injection detected", {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        textLength: text.length,
+        securityScore: calculateSecurityScore(text),
+      });
+      return new Response(
+        JSON.stringify({
+          error: "Tekst zawiera niedozwoloną zawartość",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 🔒 SECURITY: Rate limiting
+    const rateLimitResult = checkAllRateLimits(session.user.id);
+    if (!rateLimitResult.allowed) {
+      await userLogger.warning("Rate limit exceeded", {
+        userId: session.user.id,
+        remaining: rateLimitResult.remaining,
+      });
+      return new Response(
+        JSON.stringify({
+          error: "Zbyt wiele requestów. Spróbuj ponownie później.",
+          retryAfter: Math.ceil((rateLimitResult.resetAt.minute - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.ceil((rateLimitResult.resetAt.minute - Date.now()) / 1000)),
+          },
+        }
+      );
+    }
+
+    // Użyj sanityzowanego tekstu
+    const sanitizedText = validationResult.sanitizedText || text;
+
+    await userLogger.info("Flashcard generation request received", {
+      textLength: sanitizedText.length,
+      originalLength: text.length,
+      securityScore: calculateSecurityScore(text),
+      warnings: validationResult.warnings,
+      rateLimitRemaining: rateLimitResult.remaining,
+    });
+
     // Wygeneruj fiszki (pass logger to maintain request context)
-    const flashcards = await generateFlashcards(text, userLogger);
+    const flashcards = await generateFlashcards(sanitizedText, userLogger);
 
     await userLogger.info("Flashcards generated successfully", {
       count: flashcards.length,
