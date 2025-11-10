@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import DashboardNav from "./DashboardNav";
+import StatsCharts from "./StatsCharts";
+import ReviewHistory from "./ReviewHistory";
 import type { DashboardStats } from "../types";
 
 export default function DashboardContent() {
@@ -338,6 +340,22 @@ export default function DashboardContent() {
           </div>
         </div>
       </section>
+
+      {/* Wykresy (Faza 2) */}
+      {stats.activityChartData &&
+        stats.accuracyChartData &&
+        stats.cardsDistribution &&
+        stats.tagDistribution && (
+          <StatsCharts
+            activityData={stats.activityChartData}
+            accuracyData={stats.accuracyChartData}
+            distributionData={stats.cardsDistribution}
+            tagData={stats.tagDistribution}
+          />
+        )}
+
+      {/* Historia powtórek (Faza 2) */}
+      <ReviewHistory />
 
       {/* Tags Section */}
       {stats.mostUsedTags.length > 0 && (

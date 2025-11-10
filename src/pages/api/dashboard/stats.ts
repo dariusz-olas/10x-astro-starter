@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "../../../db/supabase-server";
 import { formatDatePL, getWeekStart, getMonthStart, getTodayISO } from "../../../lib/dateUtils";
 import { createServerLogger } from "../../../lib/logger-server";
 import { calculateStreak, getMostActiveDay, countActiveDays, roundTo } from "../../../lib/stats-utils";
-import type { DashboardStats, ReviewSession, CardReview } from "../../../types";
+import type { DashboardStats, ReviewSession, CardReview, ActivityChartData, AccuracyChartData, CardsDistributionData, TagDistributionData } from "../../../types";
 
 export const prerender = false;
 
@@ -28,6 +28,87 @@ function getMostUsedTags(allTags: string[][]): string[] {
     .map(([tag]) => tag);
 
   return sortedTags;
+}
+
+/**
+ * Przygotowuje dane dla wykresu aktywności (ostatnie 30 dni)
+ */
+function prepareActivityChartData(reviews: Array<{ reviewed_at: string }>): ActivityChartData[] {
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+
+  // Grupuj powtórki po datach
+  const reviewsByDate: Record<string, number> = {};
+  for (const review of reviews) {
+    const date = new Date(review.reviewed_at);
+    if (date >= thirtyDaysAgo) {
+      const dateStr = date.toISOString().split("T")[0];
+      reviewsByDate[dateStr] = (reviewsByDate[dateStr] || 0) + 1;
+    }
+  }
+
+  // Stwórz tablicę dla wszystkich 30 dni (wypełnioną zerami gdzie brak danych)
+  const chartData: ActivityChartData[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    chartData.push({
+      date: dateStr,
+      reviews: reviewsByDate[dateStr] || 0,
+    });
+  }
+
+  return chartData;
+}
+
+/**
+ * Przygotowuje dane dla wykresu poprawności (ostatnie 10 sesji)
+ */
+function prepareAccuracyChartData(sessions: ReviewSession[]): AccuracyChartData[] {
+  // Weź ostatnie 10 sesji (już posortowane)
+  const last10 = sessions.slice(-10);
+
+  return last10.map((session, index) => ({
+    session: `S${index + 1}`,
+    accuracy: roundTo(Number(session.accuracy), 1),
+    date: formatDatePL(session.completed_at) || "",
+  }));
+}
+
+/**
+ * Przygotowuje dane dla wykresu kołowego rozkładu fiszek
+ */
+function prepareCardsDistribution(newCards: number, learningCards: number, masteredCards: number): CardsDistributionData[] {
+  return [
+    { name: "Nowe", value: newCards, fill: "#ef4444" }, // red-500
+    { name: "W nauce", value: learningCards, fill: "#f59e0b" }, // amber-500
+    { name: "Opanowane", value: masteredCards, fill: "#10b981" }, // emerald-500
+  ];
+}
+
+/**
+ * Przygotowuje dane dla wykresu słupkowego tagów
+ */
+function prepareTagDistribution(allTags: string[][]): TagDistributionData[] {
+  const tagCount: Record<string, number> = {};
+
+  for (const tagsArray of allTags) {
+    if (Array.isArray(tagsArray)) {
+      for (const tag of tagsArray) {
+        if (tag && typeof tag === "string") {
+          tagCount[tag] = (tagCount[tag] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  // Sortuj i weź top 5
+  return Object.entries(tagCount)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .slice(0, 5)
+    .map(([tag, count]) => ({ tag, count }));
 }
 
 export const GET: APIRoute = async ({ request, cookies, locals }) => {
@@ -241,6 +322,24 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     // 11. Najaktywniejszy dzień tygodnia
     const mostActiveDayOfWeek = getMostActiveDay(sessions);
 
+    // ===== DANE DLA WYKRESÓW (FAZA 2) =====
+
+    // 12. Pobierz card_reviews dla wykresu aktywności
+    const { data: allReviews, error: allReviewsError } = await supabase
+      .from("card_reviews")
+      .select("reviewed_at")
+      .eq("user_id", userId);
+
+    if (allReviewsError) {
+      await userLogger.warning("Failed to fetch all reviews for charts", {}, allReviewsError);
+    }
+
+    // Przygotuj dane dla wykresów
+    const activityChartData = prepareActivityChartData(allReviews || []);
+    const accuracyChartData = prepareAccuracyChartData(sessions);
+    const cardsDistribution = prepareCardsDistribution(newCards, learningCards, masteredCards);
+    const tagDistribution = prepareTagDistribution(validTagsArrays);
+
     // Przygotuj obiekt statystyk zgodny z interfejsem DashboardStats
     const stats: DashboardStats = {
       // Podstawowe
@@ -268,6 +367,12 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
       activeDaysLast7Days: activeDaysLast7Days,
       activeDaysLast30Days: activeDaysLast30Days,
       mostActiveDayOfWeek: mostActiveDayOfWeek,
+
+      // Dane dla wykresów (Faza 2)
+      activityChartData: activityChartData,
+      accuracyChartData: accuracyChartData,
+      cardsDistribution: cardsDistribution,
+      tagDistribution: tagDistribution,
     };
 
     await userLogger.info("Dashboard stats fetched successfully", {

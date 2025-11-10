@@ -83,6 +83,12 @@ export interface DashboardStats {
   activeDaysLast7Days: number; // dni z aktywnością w ostatnich 7 dniach
   activeDaysLast30Days: number; // dni z aktywnością w ostatnich 30 dniach
   mostActiveDayOfWeek: string | null; // najaktywniejszy dzień tygodnia
+
+  // Dane dla wykresów (Faza 2)
+  activityChartData?: ActivityChartData[]; // aktywność w ostatnich 30 dniach
+  accuracyChartData?: AccuracyChartData[]; // poprawność w ostatnich 10 sesjach
+  cardsDistribution?: CardsDistributionData[]; // rozkład fiszek
+  tagDistribution?: TagDistributionData[]; // top 5 tagów
 }
 
 // Typy dla historii powtórek (dla przyszłych faz)
@@ -101,4 +107,27 @@ export interface TagStat {
   averageAccuracy: number;
   lastReview: string | null;
   cardsDue: number;
+}
+
+// Typy dla wykresów (Faza 2)
+export interface ActivityChartData {
+  date: string; // YYYY-MM-DD
+  reviews: number; // liczba powtórek tego dnia
+}
+
+export interface AccuracyChartData {
+  session: string; // np. "Sesja 1"
+  accuracy: number; // procent poprawności (0-100)
+  date: string; // data sesji dla tooltipa
+}
+
+export interface CardsDistributionData {
+  name: string; // "Nowe", "W nauce", "Opanowane"
+  value: number; // liczba fiszek
+  fill: string; // kolor
+}
+
+export interface TagDistributionData {
+  tag: string;
+  count: number; // liczba fiszek z tym tagiem
 }
