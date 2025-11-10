@@ -42,11 +42,39 @@ function getVersion(): string {
 }
 
 /**
- * GET /api/version
- * Zwraca aktualną wersję aplikacji
- *
- * Endpoint używa importu statycznego (build time) zamiast file system,
- * dzięki czemu działa w Cloudflare Edge Runtime
+ * @swagger
+ * /api/version:
+ *   get:
+ *     summary: Zwraca wersję aplikacji
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Wersja aplikacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 version:
+ *                   type: string
+ *                   description: Wersja w formacie YYYY-MM-DD.N
+ *                   example: "2025-11-10.1"
+ *         headers:
+ *           Cache-Control:
+ *             description: Cache public przez 5 minut
+ *             schema:
+ *               type: string
+ *               example: "public, max-age=300, immutable"
+ *       500:
+ *         description: Błąd serwera
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 version:
+ *                   type: string
+ *                   example: "unknown"
  */
 export const GET: APIRoute = async ({ locals }) => {
   // Get request ID from context.locals (set by middleware) or create new one
