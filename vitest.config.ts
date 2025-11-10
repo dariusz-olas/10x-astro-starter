@@ -10,5 +10,7 @@ export default defineConfig({
     ],
     reporters: "default",
     testTimeout: 10000, // Zwiększ timeout dla testów integracyjnych
+    // Global setup dla testów integracyjnych - uruchamia serwer automatycznie
+    globalSetup: ["./tests/integration/globalSetup.ts"],
   },
 });

@@ -15,6 +15,73 @@ import type {
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/dashboard/stats:
+ *   get:
+ *     summary: Pobiera statystyki użytkownika dla dashboardu
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statystyki użytkownika
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalCards:
+ *                   type: integer
+ *                   description: Łączna liczba fiszek
+ *                 cardsToReview:
+ *                   type: integer
+ *                   description: Liczba fiszek do powtórki
+ *                 currentStreak:
+ *                   type: integer
+ *                   description: Aktualna seria dni z powtórkami
+ *                 totalReviews:
+ *                   type: integer
+ *                   description: Łączna liczba powtórek
+ *                 averageAccuracy:
+ *                   type: number
+ *                   description: Średnia dokładność (%)
+ *                 mostActiveDay:
+ *                   type: string
+ *                   description: Najaktywniejszy dzień tygodnia
+ *                 activeDaysLast30:
+ *                   type: integer
+ *                   description: Liczba aktywnych dni w ostatnich 30 dniach
+ *                 activityChart:
+ *                   type: array
+ *                   description: Dane wykresu aktywności (ostatnie 30 dni)
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       date:
+ *                         type: string
+ *                         format: date
+ *                       reviews:
+ *                         type: integer
+ *                 accuracyChart:
+ *                   type: array
+ *                   description: Dane wykresu dokładności (ostatnie 10 sesji)
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       sessionId:
+ *                         type: string
+ *                       accuracy:
+ *                         type: number
+ *                 cardsDistribution:
+ *                   type: object
+ *                   description: Rozkład kart według poziomów
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera
+ */
+
 function getMostUsedTags(allTags: string[][]): string[] {
   const tagCount: Record<string, number> = {};
 

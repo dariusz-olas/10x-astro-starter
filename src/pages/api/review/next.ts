@@ -4,6 +4,45 @@ import { createServerLogger } from "../../../lib/logger-server";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/review/next:
+ *   get:
+ *     summary: Pobiera następne karty do powtórki
+ *     tags: [Review]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: force
+ *         schema:
+ *           type: boolean
+ *         description: Tryb force - zwraca wszystkie karty użytkownika zamiast tylko tych wymagających powtórki
+ *     responses:
+ *       200:
+ *         description: Lista kart do powtórki
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cards:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       front:
+ *                         type: string
+ *                       back:
+ *                         type: string
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera
+ */
 export const GET: APIRoute = async ({ request, cookies, locals }) => {
   const requestId = (locals as any).requestId || undefined;
   const logger = createServerLogger({ component: "api/review/next", requestId });

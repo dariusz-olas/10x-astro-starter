@@ -5,6 +5,51 @@ import { createServerLogger } from "../../lib/logger-server";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/generate-flashcards:
+ *   post:
+ *     summary: Generuje fiszki z podanego tekstu za pomocą AI
+ *     tags: [Flashcards]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 description: Tekst źródłowy do wygenerowania fiszek
+ *                 minLength: 1
+ *     responses:
+ *       200:
+ *         description: Fiszki wygenerowane pomyślnie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 flashcards:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       front:
+ *                         type: string
+ *                       back:
+ *                         type: string
+ *       400:
+ *         description: Nieprawidłowe dane (pusty tekst)
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera lub API AI
+ */
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
   // Get request ID from context.locals (set by middleware) or create new one
   const requestId = (locals as any).requestId || undefined;

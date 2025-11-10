@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
-import { createTestUser, cleanupTestData } from "../setup";
+import { createTestUser, cleanupTestData, testApiUrl } from "../setup";
 
 describe("POST /api/generate-flashcards", () => {
   let testUser: { user: { id: string }; session: { access_token: string } } | null = null;
@@ -16,7 +16,7 @@ describe("POST /api/generate-flashcards", () => {
   });
 
   test("zwraca 401 bez autoryzacji", async () => {
-    const response = await fetch("http://localhost:4321/api/generate-flashcards", {
+    const response = await fetch(`${testApiUrl}/api/generate-flashcards`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: "Test text" }),
@@ -27,7 +27,7 @@ describe("POST /api/generate-flashcards", () => {
   test("zwraca 400 dla pustego tekstu", async () => {
     if (!testUser?.session.access_token) return;
 
-    const response = await fetch("http://localhost:4321/api/generate-flashcards", {
+    const response = await fetch(`${testApiUrl}/api/generate-flashcards`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +47,7 @@ describe("POST /api/generate-flashcards", () => {
       TypeScript dodaje typowanie do JavaScript.
     `;
 
-    const response = await fetch("http://localhost:4321/api/generate-flashcards", {
+    const response = await fetch(`${testApiUrl}/api/generate-flashcards`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

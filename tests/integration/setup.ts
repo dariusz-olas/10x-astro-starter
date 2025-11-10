@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Mock Supabase client dla testów
+// Konfiguracja testowa - zmienne środowiskowe
+export const testApiUrl = process.env.TEST_API_URL || "http://localhost:4321";
 export const testSupabaseUrl = process.env.PUBLIC_SUPABASE_URL || "http://localhost:54321";
 export const testSupabaseKey = process.env.PUBLIC_SUPABASE_ANON_KEY || "test-key";
 

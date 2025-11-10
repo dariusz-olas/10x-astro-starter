@@ -4,6 +4,52 @@ import { createServerLogger } from "../../../lib/logger-server";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/review/session-complete:
+ *   post:
+ *     summary: Zapisuje ukończoną sesję powtórek
+ *     tags: [Review]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cardsReviewed
+ *               - cardsCorrect
+ *             properties:
+ *               cardsReviewed:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: Liczba przejrzanych kart
+ *               cardsCorrect:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: Liczba poprawnie odpowiedzianych kart (musi być <= cardsReviewed)
+ *     responses:
+ *       200:
+ *         description: Sesja zapisana pomyślnie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessionId:
+ *                   type: string
+ *                   format: uuid
+ *                 accuracy:
+ *                   type: number
+ *       400:
+ *         description: Nieprawidłowe dane
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera
+ */
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const requestId = (locals as any).requestId || undefined;
   const logger = createServerLogger({ component: "api/review/session-complete", requestId });

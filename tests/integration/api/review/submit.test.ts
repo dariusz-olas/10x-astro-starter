@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
-import { createTestUser, cleanupTestData, testSupabase } from "../../setup";
+import { createTestUser, cleanupTestData, testSupabase, testApiUrl } from "../../setup";
 
 describe("POST /api/review/submit", () => {
   let testUser: { user: { id: string }; session: { access_token: string } } | null = null;
@@ -32,7 +32,7 @@ describe("POST /api/review/submit", () => {
   });
 
   test("zwraca 401 bez autoryzacji", async () => {
-    const response = await fetch("http://localhost:4321/api/review/submit", {
+    const response = await fetch(`${testApiUrl}/api/review/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cardId: "test", grade: 2 }),
@@ -43,7 +43,7 @@ describe("POST /api/review/submit", () => {
   test("zwraca 400 dla nieprawidłowych danych", async () => {
     if (!testUser?.session.access_token) return;
 
-    const response = await fetch("http://localhost:4321/api/review/submit", {
+    const response = await fetch(`${testApiUrl}/api/review/submit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,7 +57,7 @@ describe("POST /api/review/submit", () => {
   test("aktualizuje harmonogram dla oceny 'Good' (2)", async () => {
     if (!testUser?.session.access_token || !testCardId) return;
 
-    const response = await fetch("http://localhost:4321/api/review/submit", {
+    const response = await fetch(`${testApiUrl}/api/review/submit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -85,7 +85,7 @@ describe("POST /api/review/submit", () => {
       ease: 250,
     });
 
-    const response = await fetch("http://localhost:4321/api/review/submit", {
+    const response = await fetch(`${testApiUrl}/api/review/submit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
