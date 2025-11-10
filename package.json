@@ -29,7 +29,9 @@
     "logs:error": "tail -f logs/error-$(date +%Y-%m-%d).log 2>/dev/null || type logs\\error-*.log 2>nul || echo 'No error logs found'",
     "version:update": "node scripts/update-version.js",
     "version:changelog": "node scripts/update-changelog.js",
-    "version:bump": "node scripts/update-changelog.js"
+    "version:bump": "node scripts/update-changelog.js",
+    "docs:generate": "node scripts/generate-swagger-docs.js",
+    "prebuild": "npm run docs:generate"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.10",
