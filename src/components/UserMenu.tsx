@@ -20,23 +20,23 @@ export default function UserMenu() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        logger.debug("Fetching user session");
+        await logger.debug("Fetching user session");
         const {
           data: { session },
           error,
         } = await supabase.auth.getSession();
 
         if (error) {
-          logger.error("Failed to fetch user session", {}, error);
+          await logger.error("Failed to fetch user session", {}, error);
           return;
         }
 
         if (session) {
           setUser(session.user);
-          logger.info("User session loaded", { userId: session.user.id, email: session.user.email });
+          await logger.info("User session loaded", { userId: session.user.id, email: session.user.email });
         }
       } catch (err) {
-        logger.error("Error in fetchUser", {}, err);
+        await logger.error("Error in fetchUser", {}, err);
       } finally {
         setLoading(false);
       }
@@ -47,12 +47,12 @@ export default function UserMenu() {
     // Nasłuchuj zmian w sesji
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
       if (session?.user) {
-        logger.info("User session changed", { userId: session.user.id, email: session.user.email });
+        await logger.info("User session changed", { userId: session.user.id, email: session.user.email });
       } else {
-        logger.info("User logged out");
+        await logger.info("User logged out");
       }
     });
 
@@ -126,7 +126,7 @@ export default function UserMenu() {
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-      logger.info("User initiated logout");
+      await logger.info("User initiated logout");
 
       const { error } = await supabase.auth.signOut();
 
@@ -134,10 +134,10 @@ export default function UserMenu() {
         throw error;
       }
 
-      logger.info("Logout successful, redirecting to login");
+      await logger.info("Logout successful, redirecting to login");
       window.location.href = "/login";
     } catch (error) {
-      logger.error("Logout failed", {}, error);
+      await logger.error("Logout failed", {}, error);
       alert("Błąd podczas wylogowania. Spróbuj ponownie.");
       setLoggingOut(false);
     }
@@ -179,9 +179,9 @@ export default function UserMenu() {
           <div className="py-1">
             <button
               ref={profileButtonRef}
-              onClick={() => {
+              onClick={async () => {
                 setIsOpen(false);
-                logger.info("Profile clicked (placeholder)");
+                await logger.info("Profile clicked (placeholder)");
               }}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition focus:outline-none focus:bg-gray-100"
               role="menuitem"

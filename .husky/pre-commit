@@ -3,8 +3,31 @@
 
 npx lint-staged
 
-# Aktualizuj wersję i changelog
-node scripts/update-changelog.js "Automatyczna aktualizacja wersji"
+# Sprawdź czy pominąć aktualizację wersji
+# Użytkownik może użyć zmiennej środowiskowej: SKIP_VERSION=1 git commit -m "..."
+# Lub dodać [skip-version] w commit message
+SKIP_VERSION_UPDATE=0
 
-# Dodaj zaktualizowane pliki do commit
-git add VERSION CHANGELOG.md
+# Sprawdź zmienną środowiskową
+if [ "$SKIP_VERSION" = "1" ]; then
+  SKIP_VERSION_UPDATE=1
+  echo "⏭ Skipping version update (SKIP_VERSION=1)"
+fi
+
+# Sprawdź commit message (jeśli istnieje .git/COMMIT_EDITMSG)
+if [ -f .git/COMMIT_EDITMSG ]; then
+  COMMIT_MSG=$(cat .git/COMMIT_EDITMSG 2>/dev/null || echo "")
+  if echo "$COMMIT_MSG" | grep -qi "\[skip-version\]"; then
+    SKIP_VERSION_UPDATE=1
+    echo "⏭ Skipping version update ([skip-version] in commit message)"
+  fi
+fi
+
+# Aktualizuj wersję i changelog (jeśli nie pominięto)
+if [ "$SKIP_VERSION_UPDATE" = "0" ]; then
+  node scripts/update-changelog.js "Automatyczna aktualizacja wersji"
+  # Dodaj zaktualizowane pliki do commit
+  git add VERSION CHANGELOG.md
+else
+  echo "✓ Version update skipped"
+fi

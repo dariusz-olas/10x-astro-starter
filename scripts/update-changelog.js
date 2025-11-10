@@ -8,6 +8,37 @@ const CHANGELOG_FILE = join(process.cwd(), "CHANGELOG.md");
 const VERSION_FILE = join(process.cwd(), "VERSION");
 
 /**
+ * Sanityzuje commit message przed zapisem do CHANGELOG
+ * - Usuwa HTML tags
+ * - Escapuje znaki specjalne Markdown
+ * - Trim whitespace
+ */
+function sanitizeCommitMessage(message) {
+  if (!message || typeof message !== "string") {
+    return "Aktualizacja wersji";
+  }
+
+  let sanitized = message.trim();
+
+  // Usuń HTML tags
+  sanitized = sanitized.replace(/<[^>]*>/g, "");
+
+  // Escapuj znaki specjalne Markdown (ale zachowaj podstawowe formatowanie)
+  // Escapujemy tylko potencjalnie niebezpieczne znaki
+  sanitized = sanitized
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // Usuń linki [text](url) → text
+    .replace(/`{3,}/g, "```") // Ogranicz code blocks
+    .replace(/<script[^>]*>.*?<\/script>/gi, "") // Usuń script tags (dodatkowa ochrona)
+    .replace(/javascript:/gi, "") // Usuń javascript: protocol
+    .replace(/on\w+\s*=/gi, ""); // Usuń event handlers (onclick=, onerror=, etc.)
+
+  // Usuń wielokrotne spacje/newlines
+  sanitized = sanitized.replace(/\s+/g, " ").trim();
+
+  return sanitized;
+}
+
+/**
  * Waliduje commit message
  */
 function validateCommitMessage(message) {
@@ -27,8 +58,8 @@ function validateCommitMessage(message) {
  */
 function updateChangelog(commitMessage) {
   try {
-    // Waliduj commit message
-    const sanitizedMessage = commitMessage || "Aktualizacja wersji";
+    // Sanityzuj i waliduj commit message
+    const sanitizedMessage = sanitizeCommitMessage(commitMessage || "Aktualizacja wersji");
     validateCommitMessage(sanitizedMessage);
 
     // Aktualizuj wersję najpierw

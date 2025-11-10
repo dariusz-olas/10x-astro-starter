@@ -14,7 +14,7 @@ export default function VersionDisplay() {
     const fetchVersion = async () => {
       try {
         setLoading(true);
-        logger.debug("Fetching version from API");
+        await logger.debug("Fetching version from API");
 
         const res = await fetch("/api/version");
 
@@ -28,9 +28,9 @@ export default function VersionDisplay() {
         setVersion(fetchedVersion);
         setError(false);
 
-        logger.info("Version fetched successfully", { version: fetchedVersion });
+        await logger.info("Version fetched successfully", { version: fetchedVersion });
       } catch (err) {
-        logger.error("Failed to fetch version", {}, err);
+        await logger.error("Failed to fetch version", {}, err);
         setVersion("unknown");
         setError(true);
       } finally {
