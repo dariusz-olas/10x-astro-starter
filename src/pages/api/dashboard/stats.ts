@@ -1,7 +1,9 @@
 import type { APIRoute } from "astro";
 import { createServerSupabaseClient } from "../../../db/supabase-server";
-import { formatDatePL } from "../../../lib/dateUtils";
+import { formatDatePL, getWeekStart, getMonthStart, getTodayISO } from "../../../lib/dateUtils";
 import { createServerLogger } from "../../../lib/logger-server";
+import { calculateStreak, getMostActiveDay, countActiveDays, roundTo } from "../../../lib/stats-utils";
+import type { DashboardStats, ReviewSession, CardReview, ActivityChartData, AccuracyChartData, CardsDistributionData, TagDistributionData } from "../../../types";
 
 export const prerender = false;
 
@@ -26,6 +28,87 @@ function getMostUsedTags(allTags: string[][]): string[] {
     .map(([tag]) => tag);
 
   return sortedTags;
+}
+
+/**
+ * Przygotowuje dane dla wykresu aktywności (ostatnie 30 dni)
+ */
+function prepareActivityChartData(reviews: Array<{ reviewed_at: string }>): ActivityChartData[] {
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+
+  // Grupuj powtórki po datach
+  const reviewsByDate: Record<string, number> = {};
+  for (const review of reviews) {
+    const date = new Date(review.reviewed_at);
+    if (date >= thirtyDaysAgo) {
+      const dateStr = date.toISOString().split("T")[0];
+      reviewsByDate[dateStr] = (reviewsByDate[dateStr] || 0) + 1;
+    }
+  }
+
+  // Stwórz tablicę dla wszystkich 30 dni (wypełnioną zerami gdzie brak danych)
+  const chartData: ActivityChartData[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    chartData.push({
+      date: dateStr,
+      reviews: reviewsByDate[dateStr] || 0,
+    });
+  }
+
+  return chartData;
+}
+
+/**
+ * Przygotowuje dane dla wykresu poprawności (ostatnie 10 sesji)
+ */
+function prepareAccuracyChartData(sessions: ReviewSession[]): AccuracyChartData[] {
+  // Weź ostatnie 10 sesji (już posortowane)
+  const last10 = sessions.slice(-10);
+
+  return last10.map((session, index) => ({
+    session: `S${index + 1}`,
+    accuracy: roundTo(Number(session.accuracy), 1),
+    date: formatDatePL(session.completed_at) || "",
+  }));
+}
+
+/**
+ * Przygotowuje dane dla wykresu kołowego rozkładu fiszek
+ */
+function prepareCardsDistribution(newCards: number, learningCards: number, masteredCards: number): CardsDistributionData[] {
+  return [
+    { name: "Nowe", value: newCards, fill: "#ef4444" }, // red-500
+    { name: "W nauce", value: learningCards, fill: "#f59e0b" }, // amber-500
+    { name: "Opanowane", value: masteredCards, fill: "#10b981" }, // emerald-500
+  ];
+}
+
+/**
+ * Przygotowuje dane dla wykresu słupkowego tagów
+ */
+function prepareTagDistribution(allTags: string[][]): TagDistributionData[] {
+  const tagCount: Record<string, number> = {};
+
+  for (const tagsArray of allTags) {
+    if (Array.isArray(tagsArray)) {
+      for (const tag of tagsArray) {
+        if (tag && typeof tag === "string") {
+          tagCount[tag] = (tagCount[tag] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  // Sortuj i weź top 5
+  return Object.entries(tagCount)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .slice(0, 5)
+    .map(([tag, count]) => ({ tag, count }));
 }
 
 export const GET: APIRoute = async ({ request, cookies, locals }) => {
@@ -145,26 +228,170 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 
     const mostUsedTags = getMostUsedTags(validTagsArrays);
 
-    await userLogger.info("Dashboard stats fetched successfully", {
+    // ===== NOWE STATYSTYKI =====
+
+    // 4. Statystyki powtórek - łączna liczba powtórek
+    const { count: totalReviews, error: reviewsCountError } = await supabase
+      .from("card_reviews")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    if (reviewsCountError) {
+      await userLogger.warning("Failed to count card reviews", {}, reviewsCountError);
+    }
+
+    // 5. Średnia poprawność ze wszystkich sesji
+    const { data: allSessions, error: allSessionsError } = await supabase
+      .from("review_sessions")
+      .select("accuracy, completed_at, id, user_id, cards_reviewed, cards_correct")
+      .eq("user_id", userId)
+      .order("completed_at", { ascending: true });
+
+    if (allSessionsError) {
+      await userLogger.warning("Failed to fetch all review sessions", {}, allSessionsError);
+    }
+
+    const sessions = (allSessions || []) as ReviewSession[];
+    const averageAccuracy =
+      sessions.length > 0
+        ? roundTo(sessions.reduce((sum, s) => sum + Number(s.accuracy), 0) / sessions.length, 1)
+        : 0;
+
+    // 6. Najdłuższa seria dni z powtórkami
+    const longestStreak = calculateStreak(sessions);
+
+    // 7. Fiszki do powtórki dzisiaj (due_at <= teraz)
+    const today = getTodayISO();
+    const { count: cardsDueToday, error: cardsDueError } = await supabase
+      .from("card_scheduling")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .lte("due_at", today);
+
+    if (cardsDueError) {
+      await userLogger.warning("Failed to count cards due today", {}, cardsDueError);
+    }
+
+    // 8. Statystyki algorytmu SM-2
+    const { data: schedulingData, error: schedulingError } = await supabase
+      .from("card_scheduling")
+      .select("ease, interval_days, repetitions")
+      .eq("user_id", userId);
+
+    if (schedulingError) {
+      await userLogger.warning("Failed to fetch scheduling data", {}, schedulingError);
+    }
+
+    const scheduling = schedulingData || [];
+    const averageEase = scheduling.length > 0 ? roundTo(scheduling.reduce((sum, s) => sum + s.ease, 0) / scheduling.length, 0) : 0;
+    const averageInterval =
+      scheduling.length > 0 ? roundTo(scheduling.reduce((sum, s) => sum + s.interval_days, 0) / scheduling.length, 1) : 0;
+
+    const newCards = scheduling.filter((s) => s.repetitions === 0).length;
+    const learningCards = scheduling.filter((s) => s.repetitions > 0 && s.interval_days < 30).length;
+    const masteredCards = scheduling.filter((s) => s.interval_days >= 30).length;
+
+    // 9. Statystyki czasowe - fiszki dodane w tym tygodniu/miesiącu
+    const weekStart = getWeekStart();
+    const monthStart = getMonthStart();
+
+    const { count: cardsAddedThisWeek, error: weekCountError } = await supabase
+      .from("flashcards")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", weekStart);
+
+    if (weekCountError) {
+      await userLogger.warning("Failed to count cards added this week", {}, weekCountError);
+    }
+
+    const { count: cardsAddedThisMonth, error: monthCountError } = await supabase
+      .from("flashcards")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", monthStart);
+
+    if (monthCountError) {
+      await userLogger.warning("Failed to count cards added this month", {}, monthCountError);
+    }
+
+    // 10. Aktywność w ostatnich 7/30 dniach
+    const activeDaysLast7Days = countActiveDays(sessions, 7);
+    const activeDaysLast30Days = countActiveDays(sessions, 30);
+
+    // 11. Najaktywniejszy dzień tygodnia
+    const mostActiveDayOfWeek = getMostActiveDay(sessions);
+
+    // ===== DANE DLA WYKRESÓW (FAZA 2) =====
+
+    // 12. Pobierz card_reviews dla wykresu aktywności
+    const { data: allReviews, error: allReviewsError } = await supabase
+      .from("card_reviews")
+      .select("reviewed_at")
+      .eq("user_id", userId);
+
+    if (allReviewsError) {
+      await userLogger.warning("Failed to fetch all reviews for charts", {}, allReviewsError);
+    }
+
+    // Przygotuj dane dla wykresów
+    const activityChartData = prepareActivityChartData(allReviews || []);
+    const accuracyChartData = prepareAccuracyChartData(sessions);
+    const cardsDistribution = prepareCardsDistribution(newCards, learningCards, masteredCards);
+    const tagDistribution = prepareTagDistribution(validTagsArrays);
+
+    // Przygotuj obiekt statystyk zgodny z interfejsem DashboardStats
+    const stats: DashboardStats = {
+      // Podstawowe
       totalCards: totalCards || 0,
-      hasLastReview: !!lastReview,
-      accuracy,
-      tagsCount: mostUsedTags.length,
+      lastReview: lastReview,
+      accuracy: Math.round(accuracy),
+      mostUsedTags: mostUsedTags,
+
+      // Powtórki
+      totalReviews: totalReviews || 0,
+      averageAccuracy: averageAccuracy,
+      longestStreak: longestStreak,
+      cardsDueToday: cardsDueToday || 0,
+
+      // SM-2
+      averageEase: averageEase,
+      averageInterval: averageInterval,
+      newCards: newCards,
+      learningCards: learningCards,
+      masteredCards: masteredCards,
+
+      // Czasowe
+      cardsAddedThisWeek: cardsAddedThisWeek || 0,
+      cardsAddedThisMonth: cardsAddedThisMonth || 0,
+      activeDaysLast7Days: activeDaysLast7Days,
+      activeDaysLast30Days: activeDaysLast30Days,
+      mostActiveDayOfWeek: mostActiveDayOfWeek,
+
+      // Dane dla wykresów (Faza 2)
+      activityChartData: activityChartData,
+      accuracyChartData: accuracyChartData,
+      cardsDistribution: cardsDistribution,
+      tagDistribution: tagDistribution,
+    };
+
+    await userLogger.info("Dashboard stats fetched successfully", {
+      totalCards: stats.totalCards,
+      totalReviews: stats.totalReviews,
+      cardsDueToday: stats.cardsDueToday,
+      newCards: stats.newCards,
+      learningCards: stats.learningCards,
+      masteredCards: stats.masteredCards,
     });
 
-    // Zwróć statystyki
-    return new Response(
-      JSON.stringify({
-        totalCards: totalCards || 0,
-        lastReview: lastReview,
-        accuracy: Math.round(accuracy),
-        mostUsedTags: mostUsedTags,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    // Zwróć statystyki z cache headers (Faza 3 - Optymalizacja)
+    return new Response(JSON.stringify(stats), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "private, max-age=300, stale-while-revalidate=600", // 5 min cache, 10 min stale
+      },
+    });
   } catch (error: any) {
     await logger.error("Dashboard stats fetch failed", {}, error);
     return new Response(JSON.stringify({ error: error.message || "Błąd pobierania statystyk" }), {
