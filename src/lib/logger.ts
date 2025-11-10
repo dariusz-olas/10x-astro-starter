@@ -1,7 +1,34 @@
-import { promises as fs } from "fs";
-import { join } from "path";
+// Conditional imports for Cloudflare Edge Runtime compatibility
+// fs and path are not available in Edge Runtime, so we check at runtime
 import { sanitizeData, formatError, getCurrentDateString, getLogFilePath } from "./logger-utils";
 import { LogLevel } from "./logger-types";
+
+// Helper to check if we're in Edge Runtime
+function isEdgeRuntime(): boolean {
+  // Cloudflare Edge Runtime doesn't have process.versions.node
+  return typeof process === "undefined" || !process.versions?.node;
+}
+
+// Lazy load fs and path only when needed (and only in Node.js)
+async function getFsAndPath(): Promise<{
+  fs: typeof import("fs").promises | null;
+  join: typeof import("path").join | null;
+}> {
+  if (isEdgeRuntime()) {
+    return { fs: null, join: null };
+  }
+
+  try {
+    const fsModule = await import("fs");
+    const pathModule = await import("path");
+    return {
+      fs: fsModule.promises,
+      join: pathModule.join,
+    };
+  } catch {
+    return { fs: null, join: null };
+  }
+}
 
 /**
  * Log entry interface
@@ -83,7 +110,19 @@ class Logger {
       return;
     }
 
+    // Skip initialization in Edge Runtime (fs not available)
+    if (isEdgeRuntime()) {
+      this.initialized = true; // Mark as initialized to prevent retries
+      return;
+    }
+
     try {
+      const { fs, join } = await getFsAndPath();
+      if (!fs || !join) {
+        this.initialized = true;
+        return;
+      }
+
       // Create logs directory if it doesn't exist
       await fs.mkdir(this.config.logDir, { recursive: true });
 
@@ -102,6 +141,16 @@ class Logger {
    * Rotate logs if date changed or file size exceeded
    */
   private async rotateLogsIfNeeded(): Promise<void> {
+    // Skip in Edge Runtime
+    if (isEdgeRuntime()) {
+      return;
+    }
+
+    const { fs, join } = await getFsAndPath();
+    if (!fs || !join) {
+      return;
+    }
+
     const today = getCurrentDateString();
 
     // Check if date changed
@@ -129,6 +178,16 @@ class Logger {
    * Clean old log files (older than retentionDays)
    */
   private async cleanOldLogs(): Promise<void> {
+    // Skip in Edge Runtime
+    if (isEdgeRuntime()) {
+      return;
+    }
+
+    const { fs, join } = await getFsAndPath();
+    if (!fs || !join) {
+      return;
+    }
+
     try {
       const files = await fs.readdir(this.config.logDir);
       const now = Date.now();
@@ -165,6 +224,10 @@ class Logger {
    * Check if logging to files is enabled
    */
   private isFileLoggingEnabled(): boolean {
+    // Disable file logging in Cloudflare Edge Runtime (fs not available)
+    if (isEdgeRuntime()) {
+      return false;
+    }
     return import.meta.env.LOG_ENABLED !== "false";
   }
 
@@ -200,6 +263,16 @@ class Logger {
 
     // Queue writes to prevent race conditions
     this.writeQueue = this.writeQueue.then(async () => {
+      // Skip file write in Edge Runtime
+      if (isEdgeRuntime()) {
+        return;
+      }
+
+      const { fs, join } = await getFsAndPath();
+      if (!fs || !join) {
+        return;
+      }
+
       try {
         // Write to app log
         const appLogPath = join(this.config.logDir, `app-${this.currentDate}.log`);
