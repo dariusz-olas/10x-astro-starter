@@ -384,10 +384,13 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
       masteredCards: stats.masteredCards,
     });
 
-    // Zwróć statystyki
+    // Zwróć statystyki z cache headers (Faza 3 - Optymalizacja)
     return new Response(JSON.stringify(stats), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "private, max-age=300, stale-while-revalidate=600", // 5 min cache, 10 min stale
+      },
     });
   } catch (error: any) {
     await logger.error("Dashboard stats fetch failed", {}, error);

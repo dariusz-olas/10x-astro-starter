@@ -109,7 +109,10 @@ export const GET: APIRoute = async ({ request, cookies, locals, url }) => {
 
     return new Response(JSON.stringify(history), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "private, max-age=180", // 3 min cache
+      },
     });
   } catch (error: any) {
     await logger.error("Review history fetch failed", {}, error);

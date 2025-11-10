@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "../lib/supabase";
 import DashboardNav from "./DashboardNav";
-import StatsCharts from "./StatsCharts";
-import ReviewHistory from "./ReviewHistory";
+import SkeletonLoader from "./SkeletonLoader";
 import type { DashboardStats } from "../types";
+
+// Lazy loading dla komponentów (Faza 3 - Optymalizacja)
+const StatsCharts = lazy(() => import("./StatsCharts"));
+const ReviewHistory = lazy(() => import("./ReviewHistory"));
+const TagStats = lazy(() => import("./TagStats"));
 
 export default function DashboardContent() {
   const [loading, setLoading] = useState(true);
@@ -341,21 +345,30 @@ export default function DashboardContent() {
         </div>
       </section>
 
-      {/* Wykresy (Faza 2) */}
+      {/* Wykresy (Faza 2) - Lazy loaded */}
       {stats.activityChartData &&
         stats.accuracyChartData &&
         stats.cardsDistribution &&
         stats.tagDistribution && (
-          <StatsCharts
-            activityData={stats.activityChartData}
-            accuracyData={stats.accuracyChartData}
-            distributionData={stats.cardsDistribution}
-            tagData={stats.tagDistribution}
-          />
+          <Suspense fallback={<SkeletonLoader type="chart" />}>
+            <StatsCharts
+              activityData={stats.activityChartData}
+              accuracyData={stats.accuracyChartData}
+              distributionData={stats.cardsDistribution}
+              tagData={stats.tagDistribution}
+            />
+          </Suspense>
         )}
 
-      {/* Historia powtórek (Faza 2) */}
-      <ReviewHistory />
+      {/* Historia powtórek (Faza 2) - Lazy loaded */}
+      <Suspense fallback={<SkeletonLoader type="table" />}>
+        <ReviewHistory />
+      </Suspense>
+
+      {/* Statystyki tagów (Faza 3) - Lazy loaded */}
+      <Suspense fallback={<SkeletonLoader type="default" />}>
+        <TagStats />
+      </Suspense>
 
       {/* Tags Section */}
       {stats.mostUsedTags.length > 0 && (
