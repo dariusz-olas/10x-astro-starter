@@ -15,12 +15,7 @@ class ClientLogger {
   private userEmail?: string;
   private component?: string;
 
-  constructor(options?: {
-    requestId?: string;
-    userId?: string;
-    userEmail?: string;
-    component?: string;
-  }) {
+  constructor(options?: { requestId?: string; userId?: string; userEmail?: string; component?: string }) {
     this.requestId = options?.requestId || generateRequestId();
     this.userId = options?.userId;
     this.userEmail = options?.userEmail;
@@ -30,11 +25,7 @@ class ClientLogger {
   /**
    * Create a new logger instance with updated context
    */
-  withContext(context: {
-    component?: string;
-    userId?: string;
-    userEmail?: string;
-  }): ClientLogger {
+  withContext(context: { component?: string; userId?: string; userEmail?: string }): ClientLogger {
     return new ClientLogger({
       requestId: this.requestId,
       userId: context.userId || this.userId,
@@ -53,10 +44,7 @@ class ClientLogger {
   /**
    * Log DEBUG message (only in development)
    */
-  async debug(
-    message: string,
-    context?: Record<string, unknown>
-  ): Promise<void> {
+  async debug(message: string, context?: Record<string, unknown>): Promise<void> {
     if (import.meta.env.DEV) {
       console.debug(`[DEBUG] ${message}`, context);
     }
@@ -66,10 +54,7 @@ class ClientLogger {
   /**
    * Log INFO message
    */
-  async info(
-    message: string,
-    context?: Record<string, unknown>
-  ): Promise<void> {
+  async info(message: string, context?: Record<string, unknown>): Promise<void> {
     console.info(`[INFO] ${message}`, context);
     // Optionally send to API endpoint for server-side logging
     await this.sendToServer(LogLevel.INFO, message, context);
@@ -78,11 +63,7 @@ class ClientLogger {
   /**
    * Log WARNING message
    */
-  async warning(
-    message: string,
-    context?: Record<string, unknown>,
-    error?: unknown
-  ): Promise<void> {
+  async warning(message: string, context?: Record<string, unknown>, error?: unknown): Promise<void> {
     console.warn(`[WARNING] ${message}`, context, error);
     await this.sendToServer(LogLevel.WARNING, message, context, error);
   }
@@ -90,11 +71,7 @@ class ClientLogger {
   /**
    * Log ERROR message
    */
-  async error(
-    message: string,
-    context?: Record<string, unknown>,
-    error?: unknown
-  ): Promise<void> {
+  async error(message: string, context?: Record<string, unknown>, error?: unknown): Promise<void> {
     console.error(`[ERROR] ${message}`, context, error);
     await this.sendToServer(LogLevel.ERROR, message, context, error);
   }
@@ -102,11 +79,7 @@ class ClientLogger {
   /**
    * Log CRITICAL message
    */
-  async critical(
-    message: string,
-    context?: Record<string, unknown>,
-    error?: unknown
-  ): Promise<void> {
+  async critical(message: string, context?: Record<string, unknown>, error?: unknown): Promise<void> {
     console.error(`[CRITICAL] ${message}`, context, error);
     await this.sendToServer(LogLevel.CRITICAL, message, context, error);
   }
@@ -173,12 +146,16 @@ export function setupClientErrorHandlers(): void {
 
   // Handle unhandled errors
   window.addEventListener("error", (event) => {
-    clientLogger.error("Unhandled error", {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-    }, event.error);
+    clientLogger.error(
+      "Unhandled error",
+      {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      },
+      event.error
+    );
   });
 
   // Handle unhandled promise rejections
@@ -203,4 +180,3 @@ export function createClientLogger(options?: {
  * Default export for convenience
  */
 export const clientLogger = createClientLogger();
-

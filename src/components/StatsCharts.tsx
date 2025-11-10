@@ -13,12 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import type {
-  ActivityChartData,
-  AccuracyChartData,
-  CardsDistributionData,
-  TagDistributionData,
-} from "../types";
+import type { ActivityChartData, AccuracyChartData, CardsDistributionData, TagDistributionData } from "../types";
 
 interface StatsChartsProps {
   activityData: ActivityChartData[];
@@ -27,12 +22,7 @@ interface StatsChartsProps {
   tagData: TagDistributionData[];
 }
 
-export default function StatsCharts({
-  activityData,
-  accuracyData,
-  distributionData,
-  tagData,
-}: StatsChartsProps) {
+export default function StatsCharts({ activityData, accuracyData, distributionData, tagData }: StatsChartsProps) {
   // Formatuj datę dla wykresu aktywności (pokazuj tylko dzień i miesiąc)
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -63,17 +53,11 @@ export default function StatsCharts({
         {/* Wykres aktywności */}
         {hasActivityData && (
           <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">
-              Aktywność w ostatnich 30 dniach
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Aktywność w ostatnich 30 dniach</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={formattedActivityData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="dateLabel"
-                  tick={{ fontSize: 12 }}
-                  interval="preserveStartEnd"
-                />
+                <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
                 <YAxis />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -81,22 +65,14 @@ export default function StatsCharts({
                       return (
                         <div className="bg-white p-3 border border-gray-300 rounded shadow">
                           <p className="text-sm font-medium">{payload[0].payload.date}</p>
-                          <p className="text-sm text-blue-600">
-                            Powtórek: {payload[0].value}
-                          </p>
+                          <p className="text-sm text-blue-600">Powtórek: {payload[0].value}</p>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="reviews"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ fill: "#3b82f6" }}
-                />
+                <Line type="monotone" dataKey="reviews" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6" }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -105,9 +81,7 @@ export default function StatsCharts({
         {/* Wykres poprawności */}
         {hasAccuracyData && (
           <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">
-              Poprawność w ostatnich sesjach
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Poprawność w ostatnich sesjach</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={accuracyData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -119,22 +93,14 @@ export default function StatsCharts({
                       return (
                         <div className="bg-white p-3 border border-gray-300 rounded shadow">
                           <p className="text-sm font-medium">{payload[0].payload.date}</p>
-                          <p className="text-sm text-green-600">
-                            Poprawność: {payload[0].value}%
-                          </p>
+                          <p className="text-sm text-green-600">Poprawność: {payload[0].value}%</p>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="accuracy"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ fill: "#10b981" }}
-                />
+                <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981" }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -143,9 +109,7 @@ export default function StatsCharts({
         {/* Wykres rozkładu fiszek */}
         {hasDistributionData && (
           <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">
-              Rozkład fiszek
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Rozkład fiszek</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -153,9 +117,7 @@ export default function StatsCharts({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) =>
-                    percent > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : ""
-                  }
+                  label={({ name, percent }) => (percent > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : "")}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -174,9 +136,7 @@ export default function StatsCharts({
         {/* Wykres tagów */}
         {hasTagData && (
           <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">
-              Top 5 tagów
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Top 5 tagów</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={tagData}>
                 <CartesianGrid strokeDasharray="3 3" />

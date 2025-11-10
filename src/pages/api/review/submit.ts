@@ -5,6 +5,62 @@ import { createServerLogger } from "../../../lib/logger-server";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/review/submit:
+ *   post:
+ *     summary: Zapisuje ocenę powtórki i aktualizuje harmonogram
+ *     tags: [Review]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cardId
+ *               - grade
+ *             properties:
+ *               cardId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID fiszki
+ *               grade:
+ *                 type: integer
+ *                 minimum: 0
+ *                 maximum: 3
+ *                 description: Ocena powtórki (0=Again, 1=Hard, 2=Good, 3=Easy)
+ *     responses:
+ *       200:
+ *         description: Sukces - harmonogram zaktualizowany
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cardId:
+ *                   type: string
+ *                 next:
+ *                   type: object
+ *                   properties:
+ *                     ease:
+ *                       type: integer
+ *                     intervalDays:
+ *                       type: integer
+ *                     repetitions:
+ *                       type: integer
+ *                     dueAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Nieprawidłowe dane
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera
+ */
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const requestId = (locals as any).requestId || undefined;
   const logger = createServerLogger({ component: "api/review/submit", requestId });
@@ -28,7 +84,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         // WAŻNE: Dla RLS musimy ustawić sesję w Supabase client
         // Spróbuj najpierw pobrać refresh_token z cookies
         const refreshTokenCookie = cookies.get("sb-access-token")?.value || cookies.get("sb-refresh-token")?.value;
-        
+
         // Ustaw sesję w Supabase client - RLS wymaga poprawnej sesji
         const {
           data: { session: tokenSession },
@@ -52,7 +108,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
             hasRefreshTokenCookie: !!refreshTokenCookie,
             userId: user.id,
           });
-          
+
           // Spróbuj jeszcze raz z pustym refresh_token
           const {
             data: { session: retrySession },
@@ -61,7 +117,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
             access_token: token,
             refresh_token: "",
           });
-          
+
           if (!retryError && retrySession) {
             session = retrySession;
             await logger.info("Session set via retry setSession", {
@@ -91,7 +147,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         data: { session: cookieSession },
         error: cookieError,
       } = await supabase.auth.getSession();
-      
+
       if (cookieSession) {
         session = cookieSession;
         await logger.info("Session retrieved from cookies", {
@@ -99,13 +155,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
           hasAccessToken: !!session.access_token,
           hasRefreshToken: !!session.refresh_token,
         });
-        
+
         // WAŻNE: Upewnij się, że sesja z cookies jest ustawiona w Supabase client dla RLS
         const { error: setSessionError } = await supabase.auth.setSession({
           access_token: session.access_token,
           refresh_token: session.refresh_token || "",
         });
-        
+
         if (setSessionError) {
           await logger.warning("Failed to set session from cookies", {
             error: setSessionError.message,
@@ -164,23 +220,29 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     // WAŻNE: Upewnij się, że sesja jest ustawiona przed zapytaniem do bazy
     // RLS wymaga poprawnej sesji w Supabase client
     if (session?.access_token) {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+
       if (!currentSession || currentSession.user.id !== userId) {
         await userLogger.warning("Session mismatch before query, resetting", {
           currentUserId: currentSession?.user.id,
           expectedUserId: userId,
         });
-        
+
         const { error: sessionCheckError } = await supabase.auth.setSession({
           access_token: session.access_token,
           refresh_token: session.refresh_token || "",
         });
-        
+
         if (sessionCheckError) {
-          await userLogger.error("setSession failed before query", {
-            error: sessionCheckError.message,
-          }, sessionCheckError);
+          await userLogger.error(
+            "setSession failed before query",
+            {
+              error: sessionCheckError.message,
+            },
+            sessionCheckError
+          );
         } else {
           await userLogger.info("Session reset successfully before query");
         }

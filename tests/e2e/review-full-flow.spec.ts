@@ -15,14 +15,14 @@ test.describe("Kompleksowy test przepływu review", () => {
 
   test("Pełny przepływ: rejestracja → dodaj fiszkę → wszystkie oceny → weryfikacja", async ({ page }) => {
     // Monitoruj wszystkie requesty sieciowe
-    const networkRequests: Array<{
+    const networkRequests: {
       url: string;
       method: string;
       status: number;
       headers: Record<string, string>;
       responseBody?: any;
       error?: string;
-    }> = [];
+    }[] = [];
 
     // Przechwytuj requesty i odpowiedzi
     page.on("request", (request) => {
@@ -62,18 +62,18 @@ test.describe("Kompleksowy test przepływu review", () => {
     await test.step("Rejestracja użytkownika", async () => {
       await page.goto("/register");
       await page.waitForLoadState("networkidle");
-      
+
       // Wypełnij formularz
       await page.fill("input#email", uniqueEmail);
       await page.fill("input#password", password);
       await page.fill("input#confirmPassword", password);
-      
+
       // Kliknij przycisk rejestracji i poczekaj na nawigację
       await Promise.all([
         page.waitForURL(/\/dashboard/, { timeout: 30000 }),
         page.click('button:has-text("Zarejestruj się")'),
       ]);
-      
+
       // Sprawdź czy jesteśmy na dashboardzie
       await expect(page).toHaveURL(/\/dashboard/);
       await page.waitForLoadState("networkidle");
@@ -111,7 +111,7 @@ test.describe("Kompleksowy test przepływu review", () => {
       if (!hasCard) {
         const moreCardsButton = page.locator('button:has-text("Przejrzyj więcej kart")');
         const buttonVisible = await moreCardsButton.isVisible({ timeout: 5000 }).catch(() => false);
-        
+
         if (buttonVisible) {
           await moreCardsButton.click();
           await page.waitForTimeout(3000);
@@ -143,7 +143,7 @@ test.describe("Kompleksowy test przepływu review", () => {
           // Jeśli nie ma kart, użyj trybu force
           const moreCardsButton = page.locator('button:has-text("Przejrzyj więcej kart")');
           const buttonVisible = await moreCardsButton.isVisible({ timeout: 2000 }).catch(() => false);
-          
+
           if (buttonVisible) {
             await moreCardsButton.click();
             await page.waitForTimeout(3000);
@@ -168,7 +168,7 @@ test.describe("Kompleksowy test przepływu review", () => {
         // Pokaż back jeśli jeszcze nie jest pokazany
         const showBackButton = page.locator('button:has-text("Pokaż back")');
         const backVisible = await showBackButton.isVisible({ timeout: 2000 }).catch(() => false);
-        
+
         if (backVisible) {
           await showBackButton.click();
           await page.waitForTimeout(500);
@@ -177,12 +177,12 @@ test.describe("Kompleksowy test przepływu review", () => {
         // Kliknij przycisk oceny
         const gradeButton = page.locator(grade.button);
         await expect(gradeButton).toBeVisible({ timeout: 5000 });
-        
+
         // Zapisz liczbę requestów przed kliknięciem
         const requestsBefore = networkRequests.filter((r) => r.url.includes("/api/review/submit")).length;
-        
+
         await gradeButton.click();
-        
+
         // Poczekaj na request i odpowiedź
         await page.waitForTimeout(2000);
 
@@ -215,9 +215,7 @@ test.describe("Kompleksowy test przepływu review", () => {
       expect(reviewRequests.length).toBeGreaterThan(0);
 
       // Wszystkie requesty powinny mieć autoryzację
-      const unauthorizedRequests = reviewRequests.filter(
-        (r) => !r.headers.authorization && !r.headers.Authorization
-      );
+      const unauthorizedRequests = reviewRequests.filter((r) => !r.headers.authorization && !r.headers.Authorization);
       expect(unauthorizedRequests.length).toBe(0);
 
       // Wszystkie requesty powinny mieć status 200 (lub 401 dla nieautoryzowanych, ale nie powinno być)
@@ -240,7 +238,7 @@ test.describe("Kompleksowy test przepływu review", () => {
 
       // Sprawdź czy został wykonany request do session-complete
       const sessionCompleteRequests = networkRequests.filter((r) => r.url.includes("/api/review/session-complete"));
-      
+
       // Może być 0 jeśli sesja nie została jeszcze zakończona (wszystkie karty przejrzane)
       // Ale jeśli jest, powinien mieć status 200
       for (const request of sessionCompleteRequests) {
@@ -251,4 +249,3 @@ test.describe("Kompleksowy test przepływu review", () => {
     });
   });
 });
-

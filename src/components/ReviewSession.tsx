@@ -23,109 +23,120 @@ export default function ReviewSession() {
   const abortRef = useRef<AbortController | null>(null);
   const [logger] = useState(() => createClientLogger({ component: "ReviewSession" }));
 
-  const loadQueue = useCallback(async (force = false) => {
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
-    
-    await logger.debug("loadQueue called", { force });
-    
-    // Get session and access token for authorization
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      await logger.error("Failed to get session", {}, sessionError);
-      setQueue([]);
-      return;
-    }
-    
-    if (!session) {
-      await logger.error("No session available", {});
-      setQueue([]);
-      return;
-    }
-    
-    await logger.debug("Session retrieved", {
-      hasAccessToken: !!session.access_token,
-      userId: session.user.id,
-    });
-    
-    const headers: HeadersInit = {};
-    if (session?.access_token) {
-      headers.Authorization = `Bearer ${session.access_token}`;
-      await logger.debug("Authorization header added", {
-        tokenLength: session.access_token.length,
-        tokenPrefix: session.access_token.substring(0, 20) + "...",
-      });
-    } else {
-      await logger.warning("No access token in session", {});
-    }
-    
-    const url = force ? "/api/review/next?force=true" : "/api/review/next";
-    await logger.debug("Fetching review cards", { url, force, hasAuth: !!headers.Authorization });
-    
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        headers,
-        credentials: "include",
-        signal: abortRef.current.signal,
-      });
-      
-      await logger.debug("Fetch response received", {
-        status: res.status,
-        statusText: res.statusText,
-        ok: res.ok,
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        await logger.error("Failed to load review queue", {
-          force,
-          status: res.status,
-          statusText: res.statusText,
-          errorText,
-          url,
-          hasAuth: !!headers.Authorization,
-        }, new Error(errorText));
+  const loadQueue = useCallback(
+    async (force = false) => {
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+
+      await logger.debug("loadQueue called", { force });
+
+      // Get session and access token for authorization
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        await logger.error("Failed to get session", {}, sessionError);
         setQueue([]);
         return;
       }
-      
-      const json = await res.json();
-      const cards = Array.isArray(json.cards) ? json.cards : [];
-      
-      await logger.info("Review queue loaded successfully", {
-        count: cards.length,
-        force,
-        url,
-      });
-      
-      setQueue(cards);
-      setAnswered(0);
-      setFlipped(false);
-      setSessionStats({ cardsReviewed: 0, cardsCorrect: 0 });
-      setSessionSaved(false);
-      
-      // Jeśli próbowaliśmy załadować więcej kart i nadal nie ma kart, ustaw flagę
-      if (force && cards.length === 0) {
-        setHasTriedLoadMore(true);
-        await logger.warning("No cards available even in force mode", {});
-      } else if (cards.length > 0) {
-        setHasTriedLoadMore(false);
+
+      if (!session) {
+        await logger.error("No session available", {});
+        setQueue([]);
+        return;
       }
-    } catch (error: any) {
-      await logger.error("Exception during loadQueue", {
-        force,
-        url,
-        errorMessage: error.message,
-        errorName: error.name,
-      }, error);
-      setQueue([]);
-    }
-  }, [logger]);
+
+      await logger.debug("Session retrieved", {
+        hasAccessToken: !!session.access_token,
+        userId: session.user.id,
+      });
+
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+        await logger.debug("Authorization header added", {
+          tokenLength: session.access_token.length,
+          tokenPrefix: session.access_token.substring(0, 20) + "...",
+        });
+      } else {
+        await logger.warning("No access token in session", {});
+      }
+
+      const url = force ? "/api/review/next?force=true" : "/api/review/next";
+      await logger.debug("Fetching review cards", { url, force, hasAuth: !!headers.Authorization });
+
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          headers,
+          credentials: "include",
+          signal: abortRef.current.signal,
+        });
+
+        await logger.debug("Fetch response received", {
+          status: res.status,
+          statusText: res.statusText,
+          ok: res.ok,
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          await logger.error(
+            "Failed to load review queue",
+            {
+              force,
+              status: res.status,
+              statusText: res.statusText,
+              errorText,
+              url,
+              hasAuth: !!headers.Authorization,
+            },
+            new Error(errorText)
+          );
+          setQueue([]);
+          return;
+        }
+
+        const json = await res.json();
+        const cards = Array.isArray(json.cards) ? json.cards : [];
+
+        await logger.info("Review queue loaded successfully", {
+          count: cards.length,
+          force,
+          url,
+        });
+
+        setQueue(cards);
+        setAnswered(0);
+        setFlipped(false);
+        setSessionStats({ cardsReviewed: 0, cardsCorrect: 0 });
+        setSessionSaved(false);
+
+        // Jeśli próbowaliśmy załadować więcej kart i nadal nie ma kart, ustaw flagę
+        if (force && cards.length === 0) {
+          setHasTriedLoadMore(true);
+          await logger.warning("No cards available even in force mode", {});
+        } else if (cards.length > 0) {
+          setHasTriedLoadMore(false);
+        }
+      } catch (error: any) {
+        await logger.error(
+          "Exception during loadQueue",
+          {
+            force,
+            url,
+            errorMessage: error.message,
+            errorName: error.name,
+          },
+          error
+        );
+        setQueue([]);
+      }
+    },
+    [logger]
+  );
 
   useEffect(() => {
     (async () => {
@@ -173,27 +184,27 @@ export default function ReviewSession() {
         body: JSON.stringify({ cardId: current.id, grade }),
       });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      await logger.error("Failed to submit grade", { cardId: current.id, grade }, new Error(errorText));
-      return;
-    }
-    
-    await logger.info("Grade submitted", {
-      cardId: current.id,
-      grade,
-      correct: grade >= 2,
-    });
-    
-    // Aktualizuj statystyki sesji: grade >= 2 oznacza poprawną odpowiedź
-    setSessionStats((prev) => ({
-      cardsReviewed: prev.cardsReviewed + 1,
-      cardsCorrect: prev.cardsCorrect + (grade >= 2 ? 1 : 0),
-    }));
-    
-    setQueue((prev) => prev.slice(1));
-    setAnswered((a) => a + 1);
-    setFlipped(false);
+      if (!res.ok) {
+        const errorText = await res.text();
+        await logger.error("Failed to submit grade", { cardId: current.id, grade }, new Error(errorText));
+        return;
+      }
+
+      await logger.info("Grade submitted", {
+        cardId: current.id,
+        grade,
+        correct: grade >= 2,
+      });
+
+      // Aktualizuj statystyki sesji: grade >= 2 oznacza poprawną odpowiedź
+      setSessionStats((prev) => ({
+        cardsReviewed: prev.cardsReviewed + 1,
+        cardsCorrect: prev.cardsCorrect + (grade >= 2 ? 1 : 0),
+      }));
+
+      setQueue((prev) => prev.slice(1));
+      setAnswered((a) => a + 1);
+      setFlipped(false);
     },
     [current, logger]
   );
@@ -258,10 +269,14 @@ export default function ReviewSession() {
 
           if (!res.ok) {
             const errorText = await res.text();
-            await logger.error("Failed to save review session", {
-              cardsReviewed: sessionStats.cardsReviewed,
-              cardsCorrect: sessionStats.cardsCorrect,
-            }, new Error(errorText));
+            await logger.error(
+              "Failed to save review session",
+              {
+                cardsReviewed: sessionStats.cardsReviewed,
+                cardsCorrect: sessionStats.cardsCorrect,
+              },
+              new Error(errorText)
+            );
           } else {
             await logger.info("Review session saved", {
               cardsReviewed: sessionStats.cardsReviewed,
@@ -269,10 +284,14 @@ export default function ReviewSession() {
             });
           }
         } catch (error) {
-          await logger.error("Error saving review session", {
-            cardsReviewed: sessionStats.cardsReviewed,
-            cardsCorrect: sessionStats.cardsCorrect,
-          }, error);
+          await logger.error(
+            "Error saving review session",
+            {
+              cardsReviewed: sessionStats.cardsReviewed,
+              cardsCorrect: sessionStats.cardsCorrect,
+            },
+            error
+          );
         }
       }
     };

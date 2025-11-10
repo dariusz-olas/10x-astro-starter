@@ -4,6 +4,45 @@ import { createServerLogger } from "../../../lib/logger-server";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/review/next:
+ *   get:
+ *     summary: Pobiera następne karty do powtórki
+ *     tags: [Review]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: force
+ *         schema:
+ *           type: boolean
+ *         description: Tryb force - zwraca wszystkie karty użytkownika zamiast tylko tych wymagających powtórki
+ *     responses:
+ *       200:
+ *         description: Lista kart do powtórki
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cards:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       front:
+ *                         type: string
+ *                       back:
+ *                         type: string
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera
+ */
 export const GET: APIRoute = async ({ request, cookies, locals }) => {
   const requestId = (locals as any).requestId || undefined;
   const logger = createServerLogger({ component: "api/review/next", requestId });
@@ -27,7 +66,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
         // WAŻNE: Dla RLS musimy ustawić sesję w Supabase client
         // Spróbuj najpierw pobrać refresh_token z cookies
         const refreshTokenCookie = cookies.get("sb-access-token")?.value || cookies.get("sb-refresh-token")?.value;
-        
+
         // Ustaw sesję w Supabase client - RLS wymaga poprawnej sesji
         const {
           data: { session: tokenSession },
@@ -52,7 +91,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
             hasRefreshTokenCookie: !!refreshTokenCookie,
             userId: user.id,
           });
-          
+
           // Spróbuj jeszcze raz z pustym refresh_token (czasami działa)
           const {
             data: { session: retrySession },
@@ -61,7 +100,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
             access_token: token,
             refresh_token: "",
           });
-          
+
           if (!retryError && retrySession) {
             session = retrySession;
             await logger.info("Session set via retry setSession", {
@@ -93,7 +132,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
         data: { session: cookieSession },
         error: cookieError,
       } = await supabase.auth.getSession();
-      
+
       if (cookieSession) {
         session = cookieSession;
         await logger.info("Session retrieved from cookies", {
@@ -101,14 +140,14 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
           hasAccessToken: !!session.access_token,
           hasRefreshToken: !!session.refresh_token,
         });
-        
+
         // WAŻNE: Upewnij się, że sesja z cookies jest ustawiona w Supabase client dla RLS
         // RLS wymaga poprawnej sesji w Supabase client
         const { error: setSessionError } = await supabase.auth.setSession({
           access_token: session.access_token,
           refresh_token: session.refresh_token || "",
         });
-        
+
         if (setSessionError) {
           await logger.warning("Failed to set session from cookies", {
             error: setSessionError.message,
@@ -152,21 +191,23 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
       hasSession: !!session,
       hasAccessToken: !!session.access_token,
     });
-    
+
     // Test: sprawdź czy możemy pobrać jakiekolwiek dane z flashcards
     const { count: testCount, error: testError } = await supabase
       .from("flashcards")
       .select("*", { count: "exact", head: true })
       .eq("user_id", userId);
-    
+
     await userLogger.info("Test query: total flashcards count", {
       userId,
       count: testCount,
-      error: testError ? {
-        code: testError.code,
-        message: testError.message,
-        details: testError.details,
-      } : null,
+      error: testError
+        ? {
+            code: testError.code,
+            message: testError.message,
+            details: testError.details,
+          }
+        : null,
     });
 
     let cards: any[] = [];
@@ -174,30 +215,36 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     if (force) {
       // Tryb force: zwróć wszystkie dostępne karty użytkownika (max 20)
       await userLogger.info("Force mode: querying flashcards", { userId });
-      
+
       // WAŻNE: Upewnij się, że sesja jest ustawiona przed zapytaniem
       // RLS wymaga poprawnej sesji w Supabase client - setSession powinno być już wywołane wcześniej
       // Ale upewniamy się, że działa przed wykonaniem zapytania
       if (session?.access_token) {
         // Sprawdź aktualną sesję w Supabase client
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+
         if (!currentSession || currentSession.user.id !== userId) {
           // Sesja nie jest ustawiona lub nie pasuje - ustaw ją ponownie
           await userLogger.warning("Session mismatch, resetting", {
             currentUserId: currentSession?.user.id,
             expectedUserId: userId,
           });
-          
+
           const { error: sessionCheckError } = await supabase.auth.setSession({
             access_token: session.access_token,
             refresh_token: session.refresh_token || "",
           });
-          
+
           if (sessionCheckError) {
-            await userLogger.error("setSession failed before query", {
-              error: sessionCheckError.message,
-            }, sessionCheckError);
+            await userLogger.error(
+              "setSession failed before query",
+              {
+                error: sessionCheckError.message,
+              },
+              sessionCheckError
+            );
           } else {
             await userLogger.info("Session reset successfully before query");
           }
@@ -207,7 +254,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
           });
         }
       }
-      
+
       const { data: allCards, error: fcErr } = await supabase
         .from("flashcards")
         .select("id, front, back")
@@ -216,25 +263,29 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
         .limit(20);
 
       if (fcErr) {
-        await userLogger.error("Failed to fetch flashcards (force mode)", {
-          userId,
-          errorCode: fcErr.code,
-          errorMessage: fcErr.message,
-          errorDetails: fcErr.details,
-        }, fcErr);
+        await userLogger.error(
+          "Failed to fetch flashcards (force mode)",
+          {
+            userId,
+            errorCode: fcErr.code,
+            errorMessage: fcErr.message,
+            errorDetails: fcErr.details,
+          },
+          fcErr
+        );
         return new Response(JSON.stringify({ error: "Błąd pobierania fiszek" }), {
           status: 500,
           headers: { "Content-Type": "application/json" },
         });
       }
-      
+
       await userLogger.info("Force mode: query result", {
         userId,
         cardsReturned: allCards?.length || 0,
-        cardsData: allCards?.map(c => ({ id: c.id, front: c.front?.substring(0, 50) })) || [],
+        cardsData: allCards?.map((c) => ({ id: c.id, front: c.front?.substring(0, 50) })) || [],
         rawData: allCards, // Pełne dane dla debugowania
       });
-      
+
       cards = allCards || [];
       await userLogger.info("Cards fetched (force mode)", { count: cards.length, userId });
     } else {

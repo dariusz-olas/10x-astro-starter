@@ -6,6 +6,57 @@ import type { ReviewHistoryItem } from "../../../types";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/dashboard/review-history:
+ *   get:
+ *     summary: Pobiera historię sesji powtórek użytkownika
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Liczba sesji do pobrania (1-100)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *         description: Przesunięcie (dla paginacji)
+ *     responses:
+ *       200:
+ *         description: Historia sesji powtórek
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     format: uuid
+ *                   completedAt:
+ *                     type: string
+ *                     format: date-time
+ *                   cardsReviewed:
+ *                     type: integer
+ *                   cardsCorrect:
+ *                     type: integer
+ *                   accuracy:
+ *                     type: number
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera
+ */
 export const GET: APIRoute = async ({ request, cookies, locals, url }) => {
   const requestId = (locals as any).requestId || undefined;
   const logger = createServerLogger({ component: "api/dashboard/review-history", requestId });

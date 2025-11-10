@@ -3,6 +3,39 @@ import { createServerSupabaseClient } from "../../../db/supabase-server";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Wylogowuje użytkownika i czyści cookies sesji
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: Wylogowanie pomyślne
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Wylogowano pomyślnie
+ *       500:
+ *         description: Błąd serwera
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ */
 export const POST: APIRoute = async ({ cookies }) => {
   try {
     const supabase = createServerSupabaseClient(cookies);

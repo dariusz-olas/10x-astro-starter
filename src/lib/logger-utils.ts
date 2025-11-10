@@ -149,4 +149,3 @@ export function getCurrentDateString(): string {
 export function getLogFilePath(date: string, type: "app" | "error" = "app"): string {
   return `logs/${type}-${date}.log`;
 }
-

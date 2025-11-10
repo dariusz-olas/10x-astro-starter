@@ -2,7 +2,7 @@
 
 /**
  * Skrypt do automatycznej weryfikacji zmian w systemie review
- * 
+ *
  * Uruchamia testy E2E i analizuje logi, aby zweryfikować czy wszystko działa poprawnie
  */
 
@@ -54,7 +54,7 @@ function analyzeLogs(logFilePath) {
     for (const line of lines) {
       try {
         const entry = JSON.parse(line);
-        
+
         // Filtruj tylko wpisy związane z review
         if (
           entry.component?.includes("review") ||
@@ -128,9 +128,7 @@ function checkSessionErrors(errors) {
  */
 function checkRequestStatuses(info) {
   const requests = info.filter((i) => i.message?.includes("API request completed"));
-  const failedRequests = requests.filter(
-    (r) => r.context?.statusCode && r.context.statusCode >= 400
-  );
+  const failedRequests = requests.filter((r) => r.context?.statusCode && r.context.statusCode >= 400);
 
   return { total: requests.length, failed: failedRequests.length, failedRequests };
 }
@@ -221,7 +219,7 @@ function main() {
   // 7. Podsumowanie
   console.log("📋 Podsumowanie:");
   const hasErrors = rlsErrors.length > 0 || authErrors.length > 0 || failed > 0;
-  
+
   if (hasErrors) {
     console.error("❌ Weryfikacja zakończona z błędami:");
     console.error(`   - Błędy RLS: ${rlsErrors.length}`);
@@ -236,4 +234,3 @@ function main() {
 }
 
 main();
-

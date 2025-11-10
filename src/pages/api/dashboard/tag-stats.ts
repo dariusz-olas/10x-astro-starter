@@ -6,6 +6,45 @@ import type { TagStat } from "../../../types";
 
 export const prerender = false;
 
+/**
+ * @swagger
+ * /api/dashboard/tag-stats:
+ *   get:
+ *     summary: Pobiera statystyki fiszek pogrupowane według tagów
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statystyki według tagów
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   tag:
+ *                     type: string
+ *                     description: Nazwa tagu
+ *                   cardCount:
+ *                     type: integer
+ *                     description: Liczba fiszek z tym tagiem
+ *                   averageAccuracy:
+ *                     type: number
+ *                     description: Średnia poprawność (%)
+ *                   lastReview:
+ *                     type: string
+ *                     nullable: true
+ *                     description: Data ostatniej powtórki (format polski)
+ *                   cardsDue:
+ *                     type: integer
+ *                     description: Liczba fiszek do powtórki
+ *       401:
+ *         description: Brak autoryzacji
+ *       500:
+ *         description: Błąd serwera
+ */
 export const GET: APIRoute = async ({ request, cookies, locals }) => {
   const requestId = (locals as any).requestId || undefined;
   const logger = createServerLogger({ component: "api/dashboard/tag-stats", requestId });
