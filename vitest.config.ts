@@ -6,7 +6,9 @@ export default defineConfig({
     include: [
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
-      "tests/integration/**/*.test.ts", // Dodaj testy integracyjne
+      // Testy integracyjne są wyłączone w CI/CD - wymagają uruchomionego serwera
+      // Uruchom lokalnie: VITEST_INTEGRATION=true npm test
+      ...(process.env.VITEST_INTEGRATION === "true" ? ["tests/integration/**/*.test.ts"] : []),
     ],
     reporters: "default",
     testTimeout: 10000, // Zwiększ timeout dla testów integracyjnych
