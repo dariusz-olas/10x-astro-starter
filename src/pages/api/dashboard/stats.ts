@@ -6,7 +6,6 @@ import { calculateStreak, getMostActiveDay, countActiveDays, roundTo } from "../
 import type {
   DashboardStats,
   ReviewSession,
-  CardReview,
   ActivityChartData,
   AccuracyChartData,
   CardsDistributionData,

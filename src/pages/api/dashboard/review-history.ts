@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
 import { createServerSupabaseClient } from "../../../db/supabase-server";
-import { formatDatePL } from "../../../lib/dateUtils";
 import { createServerLogger } from "../../../lib/logger-server";
 import type { ReviewHistoryItem } from "../../../types";
 

@@ -2,7 +2,11 @@ import type { APIRoute } from "astro";
 import { generateFlashcards } from "../../lib/openrouter";
 import { createServerSupabaseClient } from "../../db/supabase-server";
 import { createServerLogger } from "../../lib/logger-server";
-import { validateAndSanitizeInput, detectPromptInjection, calculateSecurityScore } from "../../lib/security/prompt-injection";
+import {
+  validateAndSanitizeInput,
+  detectPromptInjection,
+  calculateSecurityScore,
+} from "../../lib/security/prompt-injection";
 import { checkAllRateLimits } from "../../lib/security/rate-limit";
 
 export const prerender = false;
@@ -135,7 +139,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     let requestData;
     try {
       requestData = await request.json();
-    } catch (parseError: any) {
+    } catch {
       return new Response(JSON.stringify({ error: "Nieprawidłowy format danych JSON" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
