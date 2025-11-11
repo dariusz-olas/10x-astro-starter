@@ -10,6 +10,7 @@ export default function ReviewHistory() {
   const [history, setHistory] = useState<ReviewHistoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(10);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [userId, setUserId] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {

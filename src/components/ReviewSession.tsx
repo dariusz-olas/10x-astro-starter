@@ -10,7 +10,7 @@ interface Card {
 
 export default function ReviewSession() {
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [queue, setQueue] = useState<Card[]>([]);
   const [flipped, setFlipped] = useState(false);
   const [answered, setAnswered] = useState(0);

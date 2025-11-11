@@ -28,7 +28,7 @@ export default function RegisterForm() {
 
     try {
       console.log("🔐 Attempting registration...");
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
       });

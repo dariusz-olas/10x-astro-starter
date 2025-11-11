@@ -31,10 +31,10 @@ export function createServerSupabaseClient(cookies: AstroCookies): SupabaseClien
       get(name: string) {
         return cookies.get(name)?.value;
       },
-      set(name: string, value: string, options?: any) {
+      set(name: string, value: string, options?: { path?: string; maxAge?: number; sameSite?: "strict" | "lax" | "none"; httpOnly?: boolean; secure?: boolean }) {
         cookies.set(name, value, options);
       },
-      remove(name: string, options?: any) {
+      remove(name: string, options?: { path?: string }) {
         cookies.delete(name, options);
       },
     },

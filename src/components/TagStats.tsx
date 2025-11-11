@@ -9,6 +9,7 @@ export default function TagStats() {
   const [tagStats, setTagStats] = useState<TagStat[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"cards" | "accuracy" | "due">("cards");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [userId, setUserId] = useState<string | null>(null);
 
   const fetchTagStats = useCallback(async () => {
