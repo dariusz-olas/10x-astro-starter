@@ -61,9 +61,9 @@ export default function LoginForm() {
 
       // Redirect to original page or dashboard
       window.location.href = getRedirectTo();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("❌ Login error:", err);
-      setError(err?.message || "Niepoprawne dane logowania");
+      setError(err instanceof Error ? err.message : "Niepoprawne dane logowania");
       setLoading(false);
     }
   };

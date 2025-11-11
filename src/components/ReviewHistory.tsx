@@ -54,9 +54,9 @@ export default function ReviewHistory() {
       }
 
       setHistory(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logger.error("Failed to fetch review history", {}, err);
-      setError(err.message || "Błąd podczas pobierania historii");
+      setError(err instanceof Error ? err.message : "Błąd podczas pobierania historii");
     } finally {
       setLoading(false);
     }

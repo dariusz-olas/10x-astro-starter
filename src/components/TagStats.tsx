@@ -53,9 +53,9 @@ export default function TagStats() {
       }
 
       setTagStats(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logger.error("Failed to fetch tag stats", {}, err);
-      setError(err.message || "Błąd podczas pobierania statystyk tagów");
+      setError(err instanceof Error ? err.message : "Błąd podczas pobierania statystyk tagów");
     } finally {
       setLoading(false);
     }

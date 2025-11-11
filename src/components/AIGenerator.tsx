@@ -80,8 +80,8 @@ export default function AIGenerator() {
       });
 
       // Automatycznie zaznacz wszystkie
-      setSelectedCards(new Set(generatedCards.map((_: any, idx: number) => idx)));
-    } catch (err: any) {
+      setSelectedCards(new Set(generatedCards.map((_, idx: number) => idx)));
+    } catch (err: unknown) {
       await logger.error(
         "Flashcard generation failed",
         {
@@ -169,8 +169,8 @@ export default function AIGenerator() {
         setSelectedCards(new Set());
         setSuccess(null);
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || "Błąd podczas zapisywania fiszek");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Błąd podczas zapisywania fiszek");
     } finally {
       setSaving(false);
     }

@@ -121,14 +121,14 @@ export default function ReviewSession() {
         } else if (cards.length > 0) {
           setHasTriedLoadMore(false);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         await logger.error(
           "Exception during loadQueue",
           {
             force,
             url,
-            errorMessage: error.message,
-            errorName: error.name,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorName: error instanceof Error ? error.name : "Unknown",
           },
           error
         );

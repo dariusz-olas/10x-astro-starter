@@ -33,9 +33,9 @@ export default function FlashcardManager({ userId }: FlashcardManagerProps) {
       if (error) throw error;
       setFlashcards(data || []);
       await logger.info("Flashcards loaded", { count: (data || []).length });
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logger.error("Failed to load flashcards", {}, err);
-      setError(err.message || "Błąd podczas pobierania fiszek");
+      setError(err instanceof Error ? err.message : "Błąd podczas pobierania fiszek");
     } finally {
       setLoading(false);
     }
@@ -76,9 +76,9 @@ export default function FlashcardManager({ userId }: FlashcardManagerProps) {
       setFormData({ front: "", back: "", tags: "" });
       setShowAddForm(false);
       await refreshFlashcards();
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logger.error("Failed to add flashcard", {}, err);
-      setError(err.message || "Błąd podczas dodawania fiszki");
+      setError(err instanceof Error ? err.message : "Błąd podczas dodawania fiszki");
     } finally {
       setLoading(false);
     }
@@ -126,9 +126,9 @@ export default function FlashcardManager({ userId }: FlashcardManagerProps) {
       setEditingCard(null);
       setShowAddForm(false);
       await refreshFlashcards();
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logger.error("Failed to update flashcard", { cardId: editingCard.id }, err);
-      setError(err.message || "Błąd podczas aktualizacji fiszki");
+      setError(err instanceof Error ? err.message : "Błąd podczas aktualizacji fiszki");
     } finally {
       setLoading(false);
     }
@@ -148,9 +148,9 @@ export default function FlashcardManager({ userId }: FlashcardManagerProps) {
       if (error) throw error;
       await logger.info("Flashcard deleted", { cardId: id });
       await refreshFlashcards();
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logger.error("Failed to delete flashcard", { cardId: id }, err);
-      setError(err.message || "Błąd podczas usuwania fiszki");
+      setError(err instanceof Error ? err.message : "Błąd podczas usuwania fiszki");
     } finally {
       setLoading(false);
     }

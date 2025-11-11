@@ -13,6 +13,7 @@ const TagStats = lazy(() => import("./TagStats"));
 export default function DashboardContent() {
   const [logger] = useState(() => createClientLogger({ component: "DashboardContent" }));
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [userId, setUserId] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     // Podstawowe
@@ -90,9 +91,9 @@ export default function DashboardContent() {
       }
 
       setStats(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logger.error("Failed to fetch dashboard stats", {}, err);
-      setError(err.message || "Błąd podczas pobierania statystyk");
+      setError(err instanceof Error ? err.message : "Błąd podczas pobierania statystyk");
     } finally {
       setLoading(false);
     }

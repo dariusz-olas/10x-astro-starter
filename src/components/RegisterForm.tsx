@@ -41,9 +41,9 @@ export default function RegisterForm() {
 
       // Redirect to dashboard
       window.location.href = "/dashboard";
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("❌ Registration error:", err);
-      setError(err?.message || "Błąd rejestracji");
+      setError(err instanceof Error ? err.message : "Błąd rejestracji");
       setLoading(false);
     }
   };
