@@ -1,6 +1,6 @@
 /**
  * Security module for detecting and preventing prompt injection attacks
- * 
+ *
  * This module provides:
  * - Input validation and sanitization
  * - Prompt injection pattern detection
@@ -38,26 +38,26 @@ const PROMPT_INJECTION_PATTERNS = [
   /forget\s+(previous|all|the)\s+(instructions?|prompts?|commands?)/i,
   /disregard\s+(previous|all|the)\s+(instructions?|prompts?|commands?)/i,
   /override\s+(previous|all|the)\s+(instructions?|prompts?|commands?)/i,
-  
+
   // System prompt extraction
   /(show|reveal|display|print|output|tell\s+me)\s+(the\s+)?(system\s+)?(prompt|instructions?|commands?)/i,
   /what\s+(are\s+)?(the\s+)?(system\s+)?(prompt|instructions?|commands?)/i,
   /repeat\s+(the\s+)?(system\s+)?(prompt|instructions?|commands?)/i,
-  
+
   // Jailbreak attempts
   /you\s+are\s+now\s+(dan|jailbroken|unrestricted|unfiltered)/i,
   /(roleplay|pretend|act\s+as|you\s+are)\s+(a\s+)?(different|new|evil|malicious|unrestricted|unfiltered)/i,
   /roleplay.*(different|new|evil|malicious)/i, // Dodatkowy wzorzec dla "roleplay as a different"
   /jailbreak|bypass|hack|exploit/i,
-  
+
   // Command injection
   /(execute|run|eval|system|shell|command)/i,
   /<script|javascript:|onerror=|onload=/i,
-  
+
   // Data exfiltration
   /(repeat|echo|output|return)\s+(all|every|the)\s+(previous|earlier|above)/i,
   /(show|reveal|display)\s+(all|every|the)\s+(data|information|content)/i,
-  
+
   // Token manipulation
   /(max|maximum|increase)\s+(tokens?|length|size)/i,
   /(generate|create|make)\s+(as\s+)?(many|more|longer)/i,
@@ -68,13 +68,14 @@ const PROMPT_INJECTION_PATTERNS = [
  */
 const SUSPICIOUS_PATTERNS = [
   // Zbyt dużo specjalnych znaków
+  // eslint-disable-next-line no-useless-escape
   /[\[\]{}]{5,}/, // 5+ nawiasów kwadratowych/kręconych
   /[<>]{5,}/, // 5+ nawiasów trójkątnych
   /[|\\/]{10,}/, // 10+ znaków | lub \
-  
+
   // Powtarzające się sekwencje (może być atakiem)
   /(.{10,})\1{3,}/, // Powtarzająca się sekwencja 4+ razy
-  
+
   // Zbyt dużo białych znaków
   /\s{20,}/, // 20+ białych znaków z rzędu
 ];
@@ -82,10 +83,7 @@ const SUSPICIOUS_PATTERNS = [
 /**
  * Walidacja i sanityzacja inputu użytkownika
  */
-export function validateAndSanitizeInput(
-  text: string,
-  config: Partial<SecurityConfig> = {}
-): ValidationResult {
+export function validateAndSanitizeInput(text: string, config: Partial<SecurityConfig> = {}): ValidationResult {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -148,6 +146,7 @@ export function validateAndSanitizeInput(
       .replace(/\n{3,}/g, "\n\n"); // Max 2 nowe linie z rzędu
 
     // Usuń kontrolne znaki (zachowaj \n, \t)
+    // eslint-disable-next-line no-control-regex
     sanitizedText = sanitizedText.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, "");
 
     // Trim
@@ -180,6 +179,7 @@ export function escapeUserInput(text: string): string {
 /**
  * Walidacja odpowiedzi z AI
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function validateAIResponse(response: any): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -215,7 +215,7 @@ export function validateAIResponse(response: any): ValidationResult {
   // 5. Waliduj każdą fiszkę
   for (let i = 0; i < response.flashcards.length; i++) {
     const card = response.flashcards[i];
-    
+
     if (!card || typeof card !== "object") {
       errors.push(`Fiszka ${i + 1} ma nieprawidłowy format`);
       continue;
@@ -304,4 +304,3 @@ export function calculateSecurityScore(text: string): number {
 
   return Math.max(0, score);
 }
-

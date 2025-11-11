@@ -1,6 +1,6 @@
 // Conditional imports for Cloudflare Edge Runtime compatibility
 // fs and path are not available in Edge Runtime, so we check at runtime
-import { sanitizeData, formatError, getCurrentDateString, getLogFilePath } from "./logger-utils";
+import { sanitizeData, formatError, getCurrentDateString } from "./logger-utils";
 import { LogLevel } from "./logger-types";
 
 // Helper to check if we're in Edge Runtime

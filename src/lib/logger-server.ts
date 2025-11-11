@@ -4,6 +4,8 @@
  */
 
 import { logger } from "./logger";
+// LogLevel is used in type definitions but not directly in this file
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { LogLevel } from "./logger-types";
 import { generateRequestId } from "./logger-utils";
 import type { AstroCookies } from "astro";
